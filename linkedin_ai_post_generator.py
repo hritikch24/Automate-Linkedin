@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-LinkedIn DevOps Post Automation Script using Legacy UGCPosts API
---------------------------------------------------------------
-This script automatically posts DevOps content to a LinkedIn company page using the legacy UGCPosts API.
+LinkedIn DevOps Personal Profile Post Automation
+-----------------------------------------------
+This script automatically posts DevOps content to your personal LinkedIn profile using the LinkedIn API.
 It's designed to be run via GitHub Actions on a schedule to maintain a consistent social media presence.
 
 Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
-- LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID (numbers only, without "urn:li:organization:")
 """
 
 import os
@@ -54,31 +53,28 @@ DEVOPS_POSTS = [
 ]
 
 class LinkedInPoster:
-    """Handles posting content to LinkedIn company pages using the legacy UGCPosts API."""
+    """Handles posting content to a personal LinkedIn profile."""
     
-    def __init__(self, access_token: str, organization_id: str):
+    def __init__(self, access_token: str):
         """
         Initialize the LinkedIn poster.
         
         Args:
             access_token: LinkedIn API access token
-            organization_id: LinkedIn organization/company ID (numbers only)
         """
         self.access_token = access_token
-        self.organization_id = organization_id
-        # Use the legacy UGCPosts API endpoint
+        # Use the UGCPosts API endpoint
         self.api_url = "https://api.linkedin.com/v2/ugcPosts"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json',
             'X-Restli-Protocol-Version': '2.0.0'
         }
-        logger.info(f"Using legacy UGCPosts API endpoint")
-        logger.info(f"Using organization ID: {self.organization_id}")
+        logger.info(f"Using UGCPosts API for personal profile posting")
     
     def create_post_data(self, post_content: str) -> Dict[str, Any]:
         """
-        Create the post data structure for LinkedIn UGCPosts API.
+        Create the post data structure for LinkedIn UGCPosts API (personal profile).
         
         Args:
             post_content: The text content for the post
@@ -86,9 +82,9 @@ class LinkedInPoster:
         Returns:
             Dictionary containing the formatted post data
         """
-        # Format for the legacy UGCPosts API
+        # Format for personal profile posting via UGCPosts API
         return {
-            "author": f"urn:li:organization:{self.organization_id}",
+            "author": "urn:li:person:me",  # Use 'me' to refer to authenticated user
             "lifecycleState": "PUBLISHED",
             "specificContent": {
                 "com.linkedin.ugc.ShareContent": {
@@ -105,7 +101,7 @@ class LinkedInPoster:
     
     def post_to_linkedin(self, post_content: str) -> Dict[str, Any]:
         """
-        Post content to LinkedIn using the legacy UGCPosts API.
+        Post content to LinkedIn personal profile.
         
         Args:
             post_content: The text content for the post
@@ -118,7 +114,7 @@ class LinkedInPoster:
         """
         post_data = self.create_post_data(post_content)
         
-        logger.info("Posting to LinkedIn...")
+        logger.info("Posting to LinkedIn personal profile...")
         
         response = requests.post(
             self.api_url,
@@ -178,24 +174,17 @@ def main() -> None:
     try:
         # Get environment variables
         access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
-        organization_id = os.environ.get("LINKEDIN_ORGANIZATION_ID")
         
-        if not access_token or not organization_id:
-            logger.error("Missing required environment variables.")
-            logger.error("Ensure LINKEDIN_ACCESS_TOKEN and LINKEDIN_ORGANIZATION_ID are set.")
+        if not access_token:
+            logger.error("Missing required environment variable LINKEDIN_ACCESS_TOKEN.")
             exit(1)
-        
-        # Make sure organization_id is just the ID number, not the full URN
-        # Strip the "urn:li:organization:" prefix if it's included
-        if organization_id.startswith("urn:li:organization:"):
-            organization_id = organization_id.replace("urn:li:organization:", "")
         
         # Select post content
         post = select_post()
         logger.info(f"Selected post: {post['title']}")
         
         # Post to LinkedIn
-        linkedin = LinkedInPoster(access_token, organization_id)
+        linkedin = LinkedInPoster(access_token)
         response = linkedin.post_to_linkedin(post['content'])
         
         # Log post history
