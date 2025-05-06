@@ -72,8 +72,10 @@ class LinkedInPoster:
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json',
             'X-Restli-Protocol-Version': '2.0.0',
-            'LinkedIn-Version': '202401'  # Add explicit version header
+            'LinkedIn-Version': '202411'  # Current version in YYYYMM format (November 2024)
         }
+        logger.info(f"Using LinkedIn API version: 202411")
+        logger.info(f"Using organization ID: {self.organization_id}")
     
     def create_post_data(self, post_content: str) -> Dict[str, Any]:
         """
