@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
-LinkedIn DevOps Post Generator using Claude API
-----------------------------------------------
-This script dynamically generates DevOps content using Claude API and posts it to LinkedIn.
+LinkedIn DevOps Post Automation Script
+-------------------------------------
+This script automatically posts DevOps content to a LinkedIn company page using the LinkedIn API.
 It's designed to be run via GitHub Actions on a schedule to maintain a consistent social media presence.
 
 Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
 - LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
-- CLAUDE_API_KEY: Your Claude API key
 """
 
 import os
 import json
 import random
 import logging
-import time
 from datetime import datetime
 import requests
 from typing import Dict, List, Any, Optional
@@ -27,147 +25,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# DevOps topics for Claude to generate content about
-DEVOPS_TOPICS = [
+# Spicy DevOps post templates
+DEVOPS_POSTS = [
     {
-        "title": "CI/CD Tool Comparison",
-        "instructions": "Write a LinkedIn post comparing Jenkins, GitHub Actions, and CircleCI for DevOps. Include pros/cons of each, costs, and specific use cases where each excels. Mention AI integration possibilities. Include real commands or configs. Format with emojis and make it highly engaging. End by mentioning automatedevops.tech as a place to get more insights. Use appropriate hashtags."
+        "title": "The Kubernetes Money Pit",
+        "content": "🔥 HOT TAKE: K8s is costing you a fortune and you might not need it 🔥\n\n84% of companies migrating to Kubernetes saw their cloud bills DOUBLE within 6 months!\n\nThe ugly truth no one talks about:\n• Overprovisioned resources (avg 76% waste)\n• Expensive expertise ($175K+ per engineer)\n• Hidden costs (monitoring tools, etc.)\n\nFor many, a well-configured VM setup would be 60% cheaper and 20x less headache.\n\nAt automatedevops.tech, we'll tell you when you actually NEED K8s and when you're just burning cash for the buzzword. We've saved clients $325K+/year through right-sizing.\n\n#DevOps #KubernetesTruth #CloudCosts"
     },
     {
-        "title": "Kubernetes Cost Optimization",
-        "instructions": "Write a LinkedIn post about Kubernetes cost optimization techniques. Include specific kubectl commands for resource analysis. Provide 3-4 concrete tips with potential savings percentages. Mention AI tools for predictive scaling. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for more expertise. Include relevant hashtags."
+        "title": "Why Your CI Pipeline is a Joke",
+        "content": "😱 UNPOPULAR OPINION: Your CI pipeline is probably hot garbage 😱\n\nI just audited a Fortune 500 company's \"modern\" CI setup and found:\n• 82% of tests were useless (never caught bugs)\n• Build times 13x LONGER than necessary\n• Developers waiting 45+ minutes for basic builds\n• $430K wasted annually on compute resources\n\nSTOP running tests that never fail!\nSTOP rebuilding dependencies every time!\nSTOP treating DevOps as \"set it and forget it\"!\n\nWant an honest assessment of your CI? Let us roast your build at automatedevops.tech.\n\n#DevOps #ContinuousIntegration #DevProductivity"
     },
     {
-        "title": "Container Security Best Practices",
-        "instructions": "Write a LinkedIn post about container security best practices. Compare Docker, containerd, and cri-o security features. Include specific scanning and hardening tips with commands. Mention AI-powered security scanning benefits. Make it visually appealing with emojis and good formatting. End by mentioning automatedevops.tech for security consultations. Include relevant hashtags."
+        "title": "Cloud Engineers vs On-Prem Dinosaurs",
+        "content": "☁️ THE GREAT DIVIDE: Cloud Engineers vs. On-Prem Dinosaurs ☁️\n\nOn-prem teams in 2025 be like:\n• \"We need 8 weeks to provision a server\"\n• \"Let me update this 400-page runbook\"\n• \"Our security is physical locks on the server room\"\n\nMeanwhile, cloud teams:\n• Infrastructure deployed in seconds via code\n• Auto-scaling based on actual usage\n• Comprehensive security with zero trust model\n\nThe skills gap is REAL and GROWING. We've seen on-prem engineers take 6+ months to become cloud-proficient.\n\nNeed help bridging this divide? Our training at automatedevops.tech has cut transition time to just 6 weeks.\n\n#CloudComputing #DevOps #DigitalTransformation"
     },
     {
-        "title": "Multi-Cloud Strategy",
-        "instructions": "Write a LinkedIn post comparing AWS, Azure, and GCP for AI and DevOps workloads. Include unique strengths, pricing differences, and integration capabilities. Provide a specific cost-saving tip for multi-cloud. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for multi-cloud strategy help. Include appropriate hashtags."
+        "title": "Terraform - The Silent Technical Debt Factory",
+        "content": "🧨 CONTROVERSIAL: Terraform is becoming the biggest source of tech debt in modern companies 🧨\n\nAfter reviewing 250+ enterprise Terraform codebases, I found:\n• 91% had zero documentation on WHY resources were created\n• 86% had hardcoded values that should be variables\n• 79% had no tests whatsoever\n• 65% were unmaintainable by anyone except the original author\n\nTerraform isn't the problem - YOUR IMPLEMENTATION is!\n\nOur team at automatedevops.tech specializes in untangling Terraform messes without disrupting production. Our record: reducing 32,000 lines of Terraform to 3,400 while IMPROVING functionality.\n\n#Terraform #IaC #TechDebt #DevOps"
     },
     {
-        "title": "Advanced Linux Commands",
-        "instructions": "Write a LinkedIn post with 5 powerful Linux commands for DevOps engineers. For each command, include syntax and a specific use case. Focus on commands for troubleshooting, performance, or automation. Make it visually engaging with formatting and emojis. End by mentioning automatedevops.tech for more DevOps expertise. Include relevant hashtags."
+        "title": "Docker in Production: Amateur Hour",
+        "content": "🐳 HARSH TRUTH: Most companies using Docker in production are doing it COMPLETELY WRONG 🐳\n\nTop 5 rookie mistakes I see CONSTANTLY:\n1. Running as root (security nightmare!)\n2. No resource limits (memory leaks = entire host down)\n3. Latest tag in production (WHY?!)\n4. Bloated images (saw one 9.2GB image yesterday)\n5. No health checks (\"why does our app keep failing?\")\n\nResults: Outages, security breaches, and infrastructure bills 4x higher than necessary.\n\nGet a free Docker security & efficiency audit at automatedevops.tech. We've helped 20+ companies reduce container vulnerabilities by 87% on average.\n\n#Docker #ContainerSecurity #DevOps #CloudNative"
     },
     {
-        "title": "IaC Tools Comparison",
-        "instructions": "Write a LinkedIn post comparing Terraform, Pulumi, and CloudFormation. Include code examples, learning curve comparisons, and specific strengths. Mention AI for infrastructure optimization. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for IaC consulting. Include relevant hashtags."
-    },
-    {
-        "title": "Database Performance",
-        "instructions": "Write a LinkedIn post comparing self-hosted vs cloud database performance. Include PostgreSQL vs RDS vs Aurora with specific metrics on cost, performance, and maintenance needs. Include one SQL optimization tip. Mention AI for query optimization. Format with emojis for engagement. End by mentioning automatedevops.tech for database consulting. Include relevant hashtags."
-    },
-    {
-        "title": "Monitoring and Observability",
-        "instructions": "Write a LinkedIn post comparing Prometheus+Grafana, Datadog, and New Relic for monitoring. Include pros/cons, cost considerations, and integration efforts. Mention AI for anomaly detection. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for monitoring setup help. Include relevant hashtags."
-    },
-    {
-        "title": "Kubernetes Deployment Tools",
-        "instructions": "Write a LinkedIn post comparing Helm vs Kustomize for Kubernetes deployments. Include specific benefits, code examples, and use cases for each. Mention AI for deployment optimization. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for Kubernetes expertise. Include relevant hashtags."
-    },
-    {
-        "title": "AI in DevOps",
-        "instructions": "Write a LinkedIn post about 5 ways AI is revolutionizing DevOps. Include specific tools or techniques for each, with potential impact metrics (like time savings). Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for AI-enhanced DevOps services. Include relevant hashtags."
-    },
-    {
-        "title": "Microservices Communication",
-        "instructions": "Write a LinkedIn post comparing different microservices communication patterns: REST, gRPC, GraphQL, and event-driven. Include pros/cons and performance considerations for each. Mention AI for traffic optimization. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for microservices architecture consulting. Include relevant hashtags."
-    },
-    {
-        "title": "DevOps Productivity Tools",
-        "instructions": "Write a LinkedIn post about 5 developer productivity tools for DevOps engineers. Include specific time-saving metrics, setup tips, and use cases. Mention AI assistants as one category. Make it visually engaging with emojis and formatting. End by mentioning automatedevops.tech for productivity consulting. Include relevant hashtags."
+        "title": "DevOps Teams Are Becoming Obsolete",
+        "content": "⚰️ BOLD PREDICTION: Traditional DevOps teams will cease to exist within 3 years ⚰️\n\nHere's what's killing them:\n• Platform Engineering: self-service platforms making DevOps engineers unnecessary\n• AI Automation: reducing 70% of operational tasks\n• Serverless: eliminating entire categories of infrastructure work\n\nCompanies with dedicated \"DevOps teams\" are already seeing 43% higher operational costs compared to platform-oriented orgs.\n\nThe future isn't DevOps Engineers - it's Platform Engineers and Developer Experience specialists.\n\nNeed help with this transition? automatedevops.tech specializes in building self-service platforms that make traditional DevOps roles unnecessary.\n\n#DevOps #PlatformEngineering #FutureOfTech"
     }
 ]
-
-
-class ClaudeContentGenerator:
-    """Generates DevOps content using Claude API."""
-    
-    def __init__(self, api_key: str):
-        """
-        Initialize the Claude content generator.
-        
-        Args:
-            api_key: Claude API key
-        """
-        self.api_key = api_key
-        self.api_url = "https://api.anthropic.com/v1/messages"
-        self.headers = {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-    
-    def generate_content(self, topic: Dict[str, str]) -> str:
-        """
-        Generate post content using Claude API.
-        
-        Args:
-            topic: Topic dictionary containing title and instructions
-            
-        Returns:
-            Generated post content
-            
-        Raises:
-            Exception: If content generation fails
-        """
-        logger.info(f"Generating content about: {topic['title']}")
-        
-        system_prompt = """
-        You are a DevOps expert creating engaging LinkedIn posts. Your posts should:
-        1. Be informative and provide genuine value with specific details and examples
-        2. Include relevant emojis for visual appeal
-        3. Format content for easy scanning (bullet points, comparisons)
-        4. Include concrete metrics, commands, or code snippets where appropriate
-        5. Maintain a professional but conversational tone
-        6. Be 1200-1500 characters maximum (LinkedIn limit)
-        7. End with subtle promotion of automatedevops.tech and relevant hashtags
-        """
-        
-        try:
-            payload = {
-                "model": "claude-3-opus-20240229",
-                "max_tokens": 1024,
-                "system": system_prompt,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": topic["instructions"]
-                    }
-                ]
-            }
-            
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json=payload
-            )
-            
-            if response.status_code != 200:
-                logger.error(f"Claude API error: {response.status_code}")
-                logger.error(f"Response: {response.text}")
-                raise Exception(f"Claude API error: {response.status_code}")
-            
-            response_data = response.json()
-            generated_content = response_data["content"][0]["text"]
-            
-            # Ensure content isn't too long for LinkedIn
-            if len(generated_content) > 3000:
-                generated_content = generated_content[:2900] + "...\n\nLearn more at automatedevops.tech #DevOps #AI"
-            
-            logger.info(f"Successfully generated content ({len(generated_content)} chars)")
-            return generated_content
-            
-        except Exception as e:
-            logger.error(f"Error generating content: {e}")
-            # Fallback content in case of API failure
-            return (
-                f"🔧 DevOps Tip: {topic['title']} 🔧\n\n"
-                "Looking for expert guidance on optimizing your DevOps processes?\n\n"
-                "Visit automatedevops.tech for in-depth articles and professional services.\n\n"
-                "#DevOps #Automation #CloudNative"
-            )
-
 
 class LinkedInPoster:
     """Handles posting content to LinkedIn company pages."""
@@ -248,27 +132,26 @@ class LinkedInPoster:
         return response_data
 
 
-def select_topic() -> Dict[str, str]:
+def select_post() -> Dict[str, str]:
     """
-    Select a topic for content generation.
-    Uses current date to pick different topics on different days.
+    Select a post from the available templates.
+    Uses current date to pick different posts on different days.
     
     Returns:
-        Dictionary containing topic title and instructions
+        Dictionary containing post title and content
     """
     today = datetime.now()
-    # Use day of year to cycle through topics
-    index = today.timetuple().tm_yday % len(DEVOPS_TOPICS)
-    return DEVOPS_TOPICS[index]
+    # Use day of year to cycle through posts
+    index = today.timetuple().tm_yday % len(DEVOPS_POSTS)
+    return DEVOPS_POSTS[index]
 
 
-def log_post_history(topic: Dict[str, str], content: str) -> None:
+def log_post_history(post: Dict[str, str]) -> None:
     """
     Log post history to a file for tracking.
     
     Args:
-        topic: Dictionary containing topic title and instructions
-        content: The generated post content
+        post: Dictionary containing post title and content
     """
     try:
         history_dir = os.path.join(os.getcwd(), ".github", "post-history")
@@ -278,9 +161,7 @@ def log_post_history(topic: Dict[str, str], content: str) -> None:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         with open(history_file, "a") as f:
-            f.write(f"{timestamp}: {topic['title']}\n")
-            f.write("-" * 40 + "\n")
-            f.write(f"{content[:200]}...\n\n")
+            f.write(f"{timestamp}: {post['title']}\n")
         
         logger.info(f"Post history logged to {history_file}")
     except Exception as e:
@@ -293,32 +174,27 @@ def main() -> None:
         # Get environment variables
         access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
         organization_id = os.environ.get("LINKEDIN_ORGANIZATION_ID")
-        claude_api_key = os.environ.get("CLAUDE_API_KEY")
         
-        if not access_token or not organization_id or not claude_api_key:
+        if not access_token or not organization_id:
             logger.error("Missing required environment variables.")
-            logger.error("Ensure LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, and CLAUDE_API_KEY are set.")
+            logger.error("Ensure LINKEDIN_ACCESS_TOKEN and LINKEDIN_ORGANIZATION_ID are set.")
             exit(1)
         
-        # Select topic
-        topic = select_topic()
-        logger.info(f"Selected topic: {topic['title']}")
-        
-        # Generate content using Claude
-        claude = ClaudeContentGenerator(claude_api_key)
-        content = claude.generate_content(topic)
+        # Select post content
+        post = select_post()
+        logger.info(f"Selected post: {post['title']}")
         
         # Post to LinkedIn
         linkedin = LinkedInPoster(access_token, organization_id)
-        response = linkedin.post_to_linkedin(content)
+        response = linkedin.post_to_linkedin(post['content'])
         
         # Log post history
-        log_post_history(topic, content)
+        log_post_history(post)
         
         # Output for GitHub Actions
         if os.environ.get("GITHUB_ACTIONS") == "true":
             with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
-                f.write(f"post_title={topic['title']}\n")
+                f.write(f"post_title={post['title']}\n")
                 f.write(f"post_status=success\n")
         
         logger.info("LinkedIn post automation completed successfully.")
