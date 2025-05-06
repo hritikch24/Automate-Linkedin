@@ -1,0 +1,50 @@
+name: LinkedIn DevOps Post Automation with Claude AI
+
+on:
+  schedule:
+    # Runs twice a week (Monday and Thursday at 12:00 PM UTC)
+    - cron: '0 12 * * 1,4'
+  # Allow manual trigger
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  post-to-linkedin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Run LinkedIn post automation
+        id: linkedin-post
+        run: python linkedin_ai_post_generator.py
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_ORGANIZATION_ID: ${{ secrets.LINKEDIN_ORGANIZATION_ID }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      
+      - name: Log results
+        if: steps.linkedin-post.outputs.post_status == 'success'
+        run: |
+          echo "Successfully posted to LinkedIn: ${{ steps.linkedin-post.outputs.post_title }}"
+      
+      - name: Commit post history
+        if: steps.linkedin-post.outputs.post_status == 'success'
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git add .github/post-history/linkedin-posts.log
+          git commit -m "Update LinkedIn post history [skip ci]" || echo "No changes to commit"
+          git push
