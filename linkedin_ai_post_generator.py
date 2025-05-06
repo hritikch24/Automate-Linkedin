@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-LinkedIn DevOps Post Automation Script
--------------------------------------
-This script automatically posts DevOps content to a LinkedIn company page using the LinkedIn API.
+LinkedIn DevOps Post Automation Script using Legacy UGCPosts API
+--------------------------------------------------------------
+This script automatically posts DevOps content to a LinkedIn company page using the legacy UGCPosts API.
 It's designed to be run via GitHub Actions on a schedule to maintain a consistent social media presence.
 
 Required environment variables:
@@ -54,7 +54,7 @@ DEVOPS_POSTS = [
 ]
 
 class LinkedInPoster:
-    """Handles posting content to LinkedIn company pages."""
+    """Handles posting content to LinkedIn company pages using the legacy UGCPosts API."""
     
     def __init__(self, access_token: str, organization_id: str):
         """
@@ -66,20 +66,19 @@ class LinkedInPoster:
         """
         self.access_token = access_token
         self.organization_id = organization_id
-        # Use the newer, versioned API endpoint
-        self.api_url = "https://api.linkedin.com/rest/posts"
+        # Use the legacy UGCPosts API endpoint
+        self.api_url = "https://api.linkedin.com/v2/ugcPosts"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json',
-            'X-Restli-Protocol-Version': '2.0.0',
-            'LinkedIn-Version': '202411'  # Current version in YYYYMM format (November 2024)
+            'X-Restli-Protocol-Version': '2.0.0'
         }
-        logger.info(f"Using LinkedIn API version: 202411")
+        logger.info(f"Using legacy UGCPosts API endpoint")
         logger.info(f"Using organization ID: {self.organization_id}")
     
     def create_post_data(self, post_content: str) -> Dict[str, Any]:
         """
-        Create the post data structure for LinkedIn API v2 (Posts API).
+        Create the post data structure for LinkedIn UGCPosts API.
         
         Args:
             post_content: The text content for the post
@@ -87,23 +86,26 @@ class LinkedInPoster:
         Returns:
             Dictionary containing the formatted post data
         """
-        # Updated format for the newer LinkedIn Posts API
+        # Format for the legacy UGCPosts API
         return {
             "author": f"urn:li:organization:{self.organization_id}",
-            "commentary": post_content,
-            "visibility": "PUBLIC",
-            "distribution": {
-                "feedDistribution": "MAIN_FEED",
-                "targetEntities": [],
-                "thirdPartyDistributionChannels": []
-            },
             "lifecycleState": "PUBLISHED",
-            "isReshareDisabledByAuthor": False
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": post_content
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
         }
     
     def post_to_linkedin(self, post_content: str) -> Dict[str, Any]:
         """
-        Post content to LinkedIn.
+        Post content to LinkedIn using the legacy UGCPosts API.
         
         Args:
             post_content: The text content for the post
@@ -117,7 +119,6 @@ class LinkedInPoster:
         post_data = self.create_post_data(post_content)
         
         logger.info("Posting to LinkedIn...")
-        logger.info(f"Using organization ID: {self.organization_id}")
         
         response = requests.post(
             self.api_url,
@@ -131,14 +132,7 @@ class LinkedInPoster:
             raise Exception(f"LinkedIn API error: {response.status_code}")
         
         response_data = response.json() if response.text else {}
-        
-        # Check for the post ID in the response headers
-        post_id = None
-        if 'x-restli-id' in response.headers:
-            post_id = response.headers['x-restli-id']
-            logger.info(f"Successfully posted to LinkedIn. Post ID: {post_id}")
-        else:
-            logger.info("Successfully posted to LinkedIn but no post ID was returned.")
+        logger.info(f"Successfully posted to LinkedIn. Response: {response_data}")
         
         return response_data
 
