@@ -7,7 +7,7 @@ It's designed to be run via GitHub Actions on a schedule to maintain a consisten
 
 Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
-- LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
+- LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID (numbers only, without "urn:li:organization:")
 """
 
 import os
@@ -62,20 +62,22 @@ class LinkedInPoster:
         
         Args:
             access_token: LinkedIn API access token
-            organization_id: LinkedIn organization/company ID
+            organization_id: LinkedIn organization/company ID (numbers only)
         """
         self.access_token = access_token
         self.organization_id = organization_id
-        self.api_url = "https://api.linkedin.com/v2/ugcPosts"
+        # Use the newer, versioned API endpoint
+        self.api_url = "https://api.linkedin.com/rest/posts"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json',
-            'X-Restli-Protocol-Version': '2.0.0'
+            'X-Restli-Protocol-Version': '2.0.0',
+            'LinkedIn-Version': '202401'  # Add explicit version header
         }
     
     def create_post_data(self, post_content: str) -> Dict[str, Any]:
         """
-        Create the post data structure required by LinkedIn API.
+        Create the post data structure for LinkedIn API v2 (Posts API).
         
         Args:
             post_content: The text content for the post
@@ -83,20 +85,18 @@ class LinkedInPoster:
         Returns:
             Dictionary containing the formatted post data
         """
+        # Updated format for the newer LinkedIn Posts API
         return {
             "author": f"urn:li:organization:{self.organization_id}",
-            "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {
-                        "text": post_content
-                    },
-                    "shareMediaCategory": "NONE"
-                }
+            "commentary": post_content,
+            "visibility": "PUBLIC",
+            "distribution": {
+                "feedDistribution": "MAIN_FEED",
+                "targetEntities": [],
+                "thirdPartyDistributionChannels": []
             },
-            "visibility": {
-                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-            }
+            "lifecycleState": "PUBLISHED",
+            "isReshareDisabledByAuthor": False
         }
     
     def post_to_linkedin(self, post_content: str) -> Dict[str, Any]:
@@ -115,6 +115,8 @@ class LinkedInPoster:
         post_data = self.create_post_data(post_content)
         
         logger.info("Posting to LinkedIn...")
+        logger.info(f"Using organization ID: {self.organization_id}")
+        
         response = requests.post(
             self.api_url,
             headers=self.headers,
@@ -126,8 +128,15 @@ class LinkedInPoster:
             logger.error(f"Response: {response.text}")
             raise Exception(f"LinkedIn API error: {response.status_code}")
         
-        response_data = response.json()
-        logger.info(f"Successfully posted to LinkedIn. Post ID: {response_data.get('id', 'unknown')}")
+        response_data = response.json() if response.text else {}
+        
+        # Check for the post ID in the response headers
+        post_id = None
+        if 'x-restli-id' in response.headers:
+            post_id = response.headers['x-restli-id']
+            logger.info(f"Successfully posted to LinkedIn. Post ID: {post_id}")
+        else:
+            logger.info("Successfully posted to LinkedIn but no post ID was returned.")
         
         return response_data
 
@@ -179,6 +188,11 @@ def main() -> None:
             logger.error("Missing required environment variables.")
             logger.error("Ensure LINKEDIN_ACCESS_TOKEN and LINKEDIN_ORGANIZATION_ID are set.")
             exit(1)
+        
+        # Make sure organization_id is just the ID number, not the full URN
+        # Strip the "urn:li:organization:" prefix if it's included
+        if organization_id.startswith("urn:li:organization:"):
+            organization_id = organization_id.replace("urn:li:organization:", "")
         
         # Select post content
         post = select_post()
