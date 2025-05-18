@@ -3,7 +3,7 @@ name: LinkedIn Dynamic DevOps Post Automation
 on:
   schedule:
     # Runs twice a week (Monday and Thursday at 12:00 PM UTC)
-    - cron: '7 * * * *'
+    - cron: '40 * * * *'
   # Run on push to main branch
   push:
     branches:
