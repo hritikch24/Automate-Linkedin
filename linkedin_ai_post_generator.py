@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-LinkedIn DevOps Organization Post Automation Script
---------------------------------------------------
-This script automatically posts DevOps content to a LinkedIn company page using the LinkedIn UGCPosts API.
-It's designed to be run via GitHub Actions on a schedule to maintain a consistent social media presence.
+LinkedIn DevOps Post Automation with User Verification
+-----------------------------------------------------
+This script automatically posts DevOps content to a LinkedIn company page using the LinkedIn API.
+It first verifies the user identity and then posts as the organization.
 
 Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
@@ -53,47 +53,90 @@ DEVOPS_POSTS = [
     }
 ]
 
-class LinkedInPoster:
-    """Handles posting content to LinkedIn company pages."""
+
+class LinkedInHelper:
+    """Helper class for LinkedIn API operations."""
     
-    def __init__(self, access_token: str, organization_id: str):
+    def __init__(self, access_token: str):
         """
-        Initialize the LinkedIn poster.
+        Initialize the LinkedIn helper.
         
         Args:
             access_token: LinkedIn API access token
-            organization_id: LinkedIn organization/company ID (numbers only)
         """
         self.access_token = access_token
-        self.organization_id = organization_id
-        # Use the UGCPosts API endpoint from the documentation
-        self.api_url = "https://api.linkedin.com/v2/ugcPosts"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json',
             'X-Restli-Protocol-Version': '2.0.0'
         }
-        logger.info(f"Using UGCPosts API endpoint with w_organization_social permission")
-        logger.info(f"Using organization ID: {self.organization_id}")
     
-    def create_post_data(self, post_content: str) -> Dict[str, Any]:
+    def get_user_profile(self) -> Dict[str, Any]:
         """
-        Create the post data structure for LinkedIn UGCPosts API, exactly as shown in the documentation.
+        Retrieve the user's LinkedIn profile.
+        
+        Returns:
+            User profile data
+        """
+        logger.info("Retrieving user profile...")
+        url = "https://api.linkedin.com/v2/me"
+        
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to retrieve user profile: {response.status_code}")
+            logger.error(f"Response: {response.text}")
+            raise Exception(f"LinkedIn API error: {response.status_code}")
+        
+        profile_data = response.json()
+        logger.info(f"Successfully retrieved user profile. ID: {profile_data.get('id')}")
+        return profile_data
+    
+    def get_organization_access(self, organization_id: str) -> Dict[str, Any]:
+        """
+        Check if the user has access to the organization.
         
         Args:
-            post_content: The text content for the post
+            organization_id: LinkedIn organization ID
             
         Returns:
-            Dictionary containing the formatted post data
+            Organization access data
         """
-        # Format exactly as shown in LinkedIn documentation
-        return {
-            "author": f"urn:li:organization:{self.organization_id}",
+        logger.info(f"Checking organization access for org ID: {organization_id}...")
+        url = f"https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(roleAssignee~(localizedFirstName,localizedLastName),state,role,organization~(localizedName)))"
+        
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to check organization access: {response.status_code}")
+            logger.error(f"Response: {response.text}")
+            raise Exception(f"LinkedIn API error: {response.status_code}")
+        
+        access_data = response.json()
+        logger.info(f"Successfully retrieved organization access data.")
+        return access_data
+    
+    def post_as_person(self, person_id: str, content: str) -> Dict[str, Any]:
+        """
+        Post content as a person.
+        
+        Args:
+            person_id: LinkedIn person ID
+            content: Post content
+            
+        Returns:
+            Response data
+        """
+        logger.info(f"Posting as person {person_id}...")
+        url = "https://api.linkedin.com/v2/ugcPosts"
+        
+        post_data = {
+            "author": f"urn:li:person:{person_id}",
             "lifecycleState": "PUBLISHED",
             "specificContent": {
                 "com.linkedin.ugc.ShareContent": {
                     "shareCommentary": {
-                        "text": post_content
+                        "text": content
                     },
                     "shareMediaCategory": "NONE"
                 }
@@ -102,50 +145,105 @@ class LinkedInPoster:
                 "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
             }
         }
-    
-    def post_to_linkedin(self, post_content: str) -> Dict[str, Any]:
-        """
-        Post content to LinkedIn company page.
         
-        Args:
-            post_content: The text content for the post
-            
-        Returns:
-            Response data from LinkedIn API
-            
-        Raises:
-            Exception: If the post fails
-        """
-        post_data = self.create_post_data(post_content)
-        
-        logger.info("Posting to LinkedIn...")
         logger.info(f"Post data: {json.dumps(post_data, indent=2)}")
-        
-        response = requests.post(
-            self.api_url,
-            headers=self.headers,
-            json=post_data
-        )
+        response = requests.post(url, headers=self.headers, json=post_data)
         
         if response.status_code not in (200, 201):
-            logger.error(f"Failed to post to LinkedIn: {response.status_code}")
+            logger.error(f"Failed to post as person: {response.status_code}")
             logger.error(f"Response: {response.text}")
             raise Exception(f"LinkedIn API error: {response.status_code}")
         
-        logger.info(f"Response status code: {response.status_code}")
-        
-        # Get the post ID from the response headers
-        post_id = None
-        if 'x-restli-id' in response.headers:
-            post_id = response.headers['x-restli-id']
-            logger.info(f"Successfully posted to LinkedIn. Post ID: {post_id}")
-        else:
-            logger.info("Successfully posted to LinkedIn but no post ID was returned.")
-        
         response_data = response.json() if response.text else {}
-        logger.info(f"Response data: {json.dumps(response_data, indent=2) if response_data else 'No response data'}")
-        
+        logger.info(f"Successfully posted as person.")
         return response_data
+    
+    def post_as_organization(self, person_id: str, organization_id: str, content: str) -> Dict[str, Any]:
+        """
+        Post content as an organization.
+        
+        Args:
+            person_id: LinkedIn person ID
+            organization_id: LinkedIn organization ID
+            content: Post content
+            
+        Returns:
+            Response data
+        """
+        logger.info(f"Posting as organization {organization_id} with person {person_id}...")
+        url = "https://api.linkedin.com/v2/ugcPosts"
+        
+        # First try the standard format
+        post_data = {
+            "author": f"urn:li:organization:{organization_id}",
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": content
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+        
+        logger.info(f"Post data: {json.dumps(post_data, indent=2)}")
+        
+        # Try several attempts with different headers to see what works
+        logger.info("First attempt: Standard headers...")
+        response = requests.post(url, headers=self.headers, json=post_data)
+        
+        if response.status_code in (200, 201):
+            response_data = response.json() if response.text else {}
+            logger.info(f"Successfully posted as organization on first attempt.")
+            return response_data
+        else:
+            logger.warning(f"First attempt failed: {response.status_code}")
+            logger.warning(f"Response: {response.text}")
+            
+            # Try legacy Shares API
+            logger.info("Second attempt: Using Shares API...")
+            shares_url = "https://api.linkedin.com/v2/shares"
+            shares_data = {
+                "owner": f"urn:li:organization:{organization_id}",
+                "content": {
+                    "contentEntities": [
+                        {
+                            "entityLocation": "https://automatedevops.tech",
+                            "thumbnails": [
+                                {
+                                    "resolvedUrl": "https://automatedevops.tech/logo.jpg"
+                                }
+                            ]
+                        }
+                    ],
+                    "title": "Automated DevOps Post",
+                    "description": "DevOps automation and insights"
+                },
+                "text": {
+                    "text": content[:1000]  # Limit text to 1000 chars for Shares API
+                },
+                "distribution": {
+                    "linkedInDistributionTarget": {}
+                }
+            }
+            
+            shares_response = requests.post(shares_url, headers=self.headers, json=shares_data)
+            
+            if shares_response.status_code in (200, 201):
+                shares_data = shares_response.json() if shares_response.text else {}
+                logger.info(f"Successfully posted as organization using Shares API.")
+                return shares_data
+            else:
+                logger.warning(f"Second attempt failed: {shares_response.status_code}")
+                logger.warning(f"Response: {shares_response.text}")
+                
+                # If all attempts failed, raise exception
+                logger.error("All attempts to post as organization failed.")
+                raise Exception("Failed to post as organization after multiple attempts")
 
 
 def select_post() -> Dict[str, str]:
@@ -205,9 +303,29 @@ def main() -> None:
         post = select_post()
         logger.info(f"Selected post: {post['title']}")
         
-        # Post to LinkedIn
-        linkedin = LinkedInPoster(access_token, organization_id)
-        response = linkedin.post_to_linkedin(post['content'])
+        # Initialize LinkedIn helper
+        linkedin = LinkedInHelper(access_token)
+        
+        # Get user profile
+        profile = linkedin.get_user_profile()
+        person_id = profile.get('id')
+        
+        if not person_id:
+            logger.error("Failed to retrieve person ID from profile.")
+            exit(1)
+        
+        # Try to post as the organization
+        try:
+            logger.info("Attempting to post as organization...")
+            linkedin.post_as_organization(person_id, organization_id, post['content'])
+            logger.info("Successfully posted as organization!")
+        except Exception as e:
+            logger.warning(f"Failed to post as organization: {e}")
+            logger.info("Falling back to posting as personal profile...")
+            
+            # If posting as organization fails, fall back to posting as person
+            linkedin.post_as_person(person_id, post['content'])
+            logger.info("Successfully posted as personal profile!")
         
         # Log post history
         log_post_history(post)
