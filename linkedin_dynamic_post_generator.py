@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-LinkedIn DevOps Post Automation with Gemini AI Content Generation
----------------------------------------------------------------
+LinkedIn DevOps Post Automation with Gemini AI Content Generation and Quality Review
+---------------------------------------------------------------------------------
 This script automatically generates unique DevOps content using Gemini AI and posts it to LinkedIn.
+It uses Gemini to critically review its own posts before publishing to ensure high quality.
 It checks for similarity with previous posts to avoid repetition.
 
 Required environment variables:
@@ -293,6 +294,140 @@ class GeminiContentGenerator:
         logger.info(f"Generated fallback topic: {topic}")
         return topic
     
+    def generate_and_verify_post(self, topic: str, max_attempts: int = 5) -> Dict[str, str]:
+        """
+        Generate a post and have Gemini verify its quality before finalizing.
+        
+        Args:
+            topic: The topic to generate content about
+            max_attempts: Maximum number of generation attempts
+            
+        Returns:
+            Dictionary with title and content
+        """
+        logger.info(f"Generating and verifying content about: {topic}")
+        
+        for attempt in range(max_attempts):
+            logger.info(f"Generation attempt {attempt + 1}/{max_attempts}")
+            
+            # Generate content
+            content = self._generate_single_content(topic)
+            
+            # Check if content is similar to previous posts
+            if self.history_manager.is_similar_to_previous(content):
+                logger.info(f"Generated content too similar to previous post, trying again...")
+                continue
+            
+            # Self-review the post quality with Gemini
+            review_result = self._review_post_quality(topic, content)
+            if review_result["is_good_quality"]:
+                logger.info(f"Post passed quality review: {review_result['explanation']}")
+                return {
+                    "title": topic,
+                    "content": content,
+                    "review": review_result['explanation']
+                }
+            else:
+                logger.info(f"Post failed quality review: {review_result['explanation']}")
+        
+        # If we couldn't generate good quality content after max_attempts, create one with higher randomization
+        logger.warning(f"Could not generate good quality content after {max_attempts} attempts, using higher randomization")
+        content = self._generate_single_content(topic, temperature=1.0)
+        review_result = self._review_post_quality(topic, content)
+        
+        return {
+            "title": topic,
+            "content": content,
+            "review": review_result.get('explanation', 'No review available for final attempt')
+        }
+    
+    def _review_post_quality(self, topic: str, content: str) -> Dict[str, Any]:
+        """
+        Have Gemini review the quality of a generated post.
+        
+        Args:
+            topic: The post topic
+            content: The post content
+            
+        Returns:
+            Dictionary with review results
+        """
+        url = f"{self.api_url}?key={self.api_key}"
+        
+        review_prompt = f"""
+        You are a critical content reviewer for DevOps and tech-related LinkedIn posts.
+        You have very high standards for content quality, originality, and professionalism.
+        
+        Review the following LinkedIn post about "{topic}" and determine if it meets these standards:
+        
+        1. Is it specific and insightful rather than generic?
+        2. Does it avoid repetitive phrasing and awkward wording?
+        3. Does it provide real value rather than empty platitudes?
+        4. Is it authentic and not overly AI-generated sounding?
+        5. Would a DevOps professional find it credible and valuable?
+        6. Does it avoid repeating the same phrase multiple times?
+        7. Does it have a natural flow with varied sentence structures?
+        8. Does it include specific examples, tools, or practices?
+        
+        POST CONTENT TO REVIEW:
+        ----------------------
+        {content}
+        ----------------------
+        
+        First, provide a yes/no determination if this post meets professional quality standards.
+        Then, explain your reasoning in 2-3 sentences.
+        
+        Format your response exactly like this:
+        VERDICT: [yes/no]
+        EXPLANATION: [your explanation]
+        """
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": review_prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,  # Low temperature for more consistent evaluation
+                "topK": 40,
+                "topP": 0.95,
+                "maxOutputTokens": 200
+            }
+        }
+        
+        try:
+            response = requests.post(url, json=payload)
+            
+            if response.status_code != 200:
+                logger.error(f"Gemini API error during review: {response.status_code}")
+                # Default to accepting the post if review fails
+                return {"is_good_quality": True, "explanation": "Review failed, defaulting to accept"}
+            
+            response_data = response.json()
+            review_text = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Parse the review response
+            verdict_line = next((line for line in review_text.split('\n') if line.startswith('VERDICT:')), '')
+            explanation_line = next((line for line in review_text.split('\n') if line.startswith('EXPLANATION:')), '')
+            
+            verdict = 'yes' in verdict_line.lower() if verdict_line else True
+            explanation = explanation_line.replace('EXPLANATION:', '').strip() if explanation_line else "No detailed explanation provided"
+            
+            return {
+                "is_good_quality": verdict,
+                "explanation": explanation
+            }
+            
+        except Exception as e:
+            logger.error(f"Error during post quality review: {e}")
+            # Default to accepting the post if an exception occurs
+            return {"is_good_quality": True, "explanation": f"Review error: {str(e)}"}
+    
     def generate_post_content(self, topic: str, max_attempts: int = 3) -> Dict[str, str]:
         """
         Generate unique post content that isn't too similar to previous posts.
@@ -357,8 +492,21 @@ class GeminiContentGenerator:
         meta_prompt = random.choice(META_PROMPTS)
         prompt = meta_prompt.format(topic=topic)
         
-        # Add uniqueness instructions
-        prompt += f"\n\nMake this post absolutely unique and different from standard posts on this topic. Add a fresh perspective or unconventional insights. Random seed: {random_seed}. Timestamp: {timestamp}."
+        # Add quality improvement instructions
+        prompt += f"""
+
+        IMPORTANT QUALITY GUIDELINES:
+        1. Be specific and technical - mention specific tools, techniques or metrics
+        2. Avoid repetitive phrasing - never repeat the title phrase multiple times
+        3. Write in a natural human voice that sounds authentic
+        4. Include concrete examples and practical insights
+        5. Avoid generic statements or empty platitudes
+        6. Use varied sentence structures and natural transitions
+        7. Ensure every point provides real value to DevOps professionals
+
+        Random seed: {random_seed}
+        Timestamp: {timestamp}
+        """
         
         payload = {
             "contents": [
@@ -416,25 +564,25 @@ class GeminiContentGenerator:
         # Random facts/points about DevOps and tech topics
         random_points = [
             f"{topic} has seen a dramatic evolution in recent years",
-            f"Most organizations struggle with implementing {topic} effectively",
-            f"The ROI of proper {topic} implementation can exceed 300%",
-            f"Industry leaders in {topic} report 60% faster time-to-market",
-            f"Common misconceptions about {topic} lead to implementation failures",
-            f"Best practices for {topic} include automated testing and continuous feedback",
-            f"The future of {topic} will likely include more AI integration",
-            f"Security considerations for {topic} are often overlooked",
-            f"Proper monitoring is essential for successful {topic} projects",
-            f"Team structure greatly impacts {topic} effectiveness",
-            f"Training and culture are as important as tools for {topic}",
-            f"Cost optimization is a key benefit of mature {topic} implementations",
-            f"Open source tools have revolutionized how we approach {topic}",
-            f"Enterprise adoption of {topic} has increased 85% in the past year",
-            f"Hybrid approaches often yield the best results for {topic}",
-            f"The biggest challenge with {topic} is often organizational, not technical",
-            f"Successful {topic} requires executive sponsorship and cultural alignment",
-            f"Small wins can build momentum for larger {topic} transformations",
-            f"Metrics and measurement are critical for {topic} success",
-            f"The talent gap in {topic} continues to challenge organizations"
+            f"Most organizations struggle with implementing this technology effectively",
+            f"The ROI of proper implementation can exceed 300%",
+            f"Industry leaders report 60% faster time-to-market",
+            f"Common misconceptions lead to implementation failures",
+            f"Best practices include automated testing and continuous feedback",
+            f"Future trends will likely include more AI integration",
+            f"Security considerations are often overlooked",
+            f"Proper monitoring is essential for successful projects",
+            f"Team structure greatly impacts effectiveness",
+            f"Training and culture are as important as tools",
+            f"Cost optimization is a key benefit of mature implementations",
+            f"Open source tools have revolutionized this space",
+            f"Enterprise adoption has increased 85% in the past year",
+            f"Hybrid approaches often yield the best results",
+            f"The biggest challenge is often organizational, not technical",
+            f"Success requires executive sponsorship and cultural alignment",
+            f"Small wins can build momentum for larger transformations",
+            f"Metrics and measurement are critical for success",
+            f"The talent gap continues to challenge organizations"
         ]
         
         # Create a unique combination of points
@@ -457,9 +605,9 @@ class GeminiContentGenerator:
         
         return (
             f"🚀 Thoughts on {topic} 🚀\n\n"
-            f"I've been thinking about {topic} lately and wanted to share some insights:\n\n"
+            f"I've been thinking about this topic lately and wanted to share some insights:\n\n"
             + "\n".join(f"• {point}" for point in selected_points) + 
-            f"\n\nWhat has been your experience with {topic}? What challenges have you faced?\n\n"
+            f"\n\nWhat has been your experience with this technology? What challenges have you faced?\n\n"
             f"I'd love to hear your thoughts in the comments below!\n\n"
             f"{hashtag_str} {topic_hashtag}"
         )
@@ -684,8 +832,23 @@ def main() -> None:
         # Generate a new topic
         topic = gemini.generate_topic()
         
-        # Generate post content
-        post = gemini.generate_post_content(topic)
+        # Generate and verify post content
+        post = gemini.generate_and_verify_post(topic)
+        
+        # Log the review result
+        logger.info(f"Post quality review: {post.get('review', 'No review available')}")
+        
+        # Debug output mode (if environment variable is set)
+        if os.environ.get("DEBUG_MODE") == "true":
+            logger.info("DEBUG MODE: Printing post without publishing")
+            print("\n" + "="*50)
+            print(f"Topic: {post['title']}")
+            print("-"*50)
+            print(post['content'])
+            print("\n" + "="*50)
+            print(f"Quality Review: {post.get('review', 'No review available')}")
+            print("="*50 + "\n")
+            return
         
         # Initialize LinkedIn helper
         linkedin = LinkedInHelper(access_token)
@@ -719,6 +882,7 @@ def main() -> None:
             with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
                 f.write(f"post_title={post['title']}\n")
                 f.write(f"post_status=success\n")
+                f.write(f"post_quality={post.get('review', 'No review available')}\n")
         
         logger.info("LinkedIn post automation completed successfully.")
     
