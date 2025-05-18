@@ -31,43 +31,43 @@ logger = logging.getLogger(__name__)
 DEVOPS_TOPICS = [
     {
         "title": "Kubernetes In-Place Pod Scaling",
-        "prompt": "Write an engaging, professional LinkedIn post about Kubernetes' new in-place pod scaling feature. Include details on how it improves resource utilization compared to the old approach. Mention performance metrics, real-world benefits, and implementation tips. Use emojis and ensure good formatting with bullet points. Include hashtags related to Kubernetes, DevOps, and cloud native technologies. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and cutting-edge. Keep the post informative yet attention-grabbing with a slightly controversial angle."
+        "prompt": "Write an engaging, professional LinkedIn post about Kubernetes' new in-place pod scaling feature. Include details on how it improves resource utilization compared to the old approach. Mention performance metrics, real-world benefits, and implementation tips. Use emojis and ensure good formatting with bullet points. Include hashtags related to Kubernetes, DevOps, and cloud native technologies. Include a call to action directing people to connect with you for DevOps expertise. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and cutting-edge. Keep the post informative yet attention-grabbing with a slightly controversial angle. The post should be at least 10-16 lines long."
     },
     {
         "title": "AI-Powered Observability",
-        "prompt": "Write an engaging, professional LinkedIn post about how AI is revolutionizing observability in DevOps. Include specific examples of tools that use AI to detect anomalies, predict failures, and automate root cause analysis. Mention metrics on how AI-powered observability has reduced MTTR (Mean Time to Resolution) and prevented outages. Use emojis and ensure good formatting with bullet points. Include hashtags related to AI, DevOps, and observability. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and cutting-edge."
+        "prompt": "Write an engaging, professional LinkedIn post about how AI is revolutionizing observability in DevOps. Include specific examples of tools that use AI to detect anomalies, predict failures, and automate root cause analysis. Mention metrics on how AI-powered observability has reduced MTTR (Mean Time to Resolution) and prevented outages. Use emojis and ensure good formatting with bullet points. Include hashtags related to AI, DevOps, and observability. Include a call to action for people to connect with you to discuss AI observability strategies. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and cutting-edge. The post should be at least 10-16 lines long."
     },
     {
         "title": "eBPF for Kubernetes Security",
-        "prompt": "Write an engaging, professional LinkedIn post about using eBPF for Kubernetes security. Explain how eBPF provides deeper visibility and control compared to traditional security approaches. Include specific examples of security threats it can detect and prevent. Mention real-world performance impact and implementation challenges. Use emojis and ensure good formatting with bullet points. Include relevant hashtags related to Kubernetes, security, and eBPF. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and cutting-edge."
+        "prompt": "Write an engaging, professional LinkedIn post about using eBPF for Kubernetes security. Explain how eBPF provides deeper visibility and control compared to traditional security approaches. Include specific examples of security threats it can detect and prevent. Mention real-world performance impact and implementation challenges. Use emojis and ensure good formatting with bullet points. Include relevant hashtags related to Kubernetes, security, and eBPF. Include a call to action for people to share their eBPF experiences or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and cutting-edge. The post should be at least 10-16 lines long."
     },
     {
         "title": "GitOps vs Platform Engineering",
-        "prompt": "Write an engaging, provocative LinkedIn post comparing GitOps and Platform Engineering approaches. Discuss where each shines and falls short. Include specific metrics on adoption, resource requirements, and organizational impact. Mention how these approaches affect developer productivity and business outcomes. Use emojis and ensure good formatting with bullet points. Include hashtags related to GitOps, Platform Engineering, and DevOps. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable with a slightly controversial angle."
+        "prompt": "Write an engaging, provocative LinkedIn post comparing GitOps and Platform Engineering approaches. Discuss where each shines and falls short. Include specific metrics on adoption, resource requirements, and organizational impact. Mention how these approaches affect developer productivity and business outcomes. Use emojis and ensure good formatting with bullet points. Include hashtags related to GitOps, Platform Engineering, and DevOps. Include a call to action for people to share which approach they prefer and why. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable with a slightly controversial angle. The post should be at least 10-16 lines long."
     },
     {
         "title": "Cost Optimization in Multi-Cloud",
-        "prompt": "Write an engaging, professional LinkedIn post about cost optimization strategies for multi-cloud environments. Include specific techniques like spot instance automation, idle resource detection, and right-sizing. Mention real savings percentages achieved by implementing these methods. Compare the cost structures of AWS, Azure, and GCP for similar workloads. Use emojis and ensure good formatting with bullet points. Include hashtags related to cloud computing, FinOps, and cost optimization. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and include surprising statistics."
+        "prompt": "Write an engaging, professional LinkedIn post about cost optimization strategies for multi-cloud environments. Include specific techniques like spot instance automation, idle resource detection, and right-sizing. Mention real savings percentages achieved by implementing these methods. Compare the cost structures of AWS, Azure, and GCP for similar workloads. Use emojis and ensure good formatting with bullet points. Include hashtags related to cloud computing, FinOps, and cost optimization. Include a call to action for people to share their own cost-saving tips or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and include surprising statistics. The post should be at least 10-16 lines long."
     },
     {
         "title": "DevSecOps Pipeline Automation",
-        "prompt": "Write an engaging, professional LinkedIn post about automating security in DevOps pipelines. Include specific tools for SAST, DAST, SCA, and CSPM that can be integrated. Mention metrics on how automated security has caught vulnerabilities before production and reduced security debt. Discuss the shift-left approach and its benefits. Use emojis and ensure good formatting with bullet points. Include hashtags related to DevSecOps, security automation, and compliance. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and cutting-edge."
+        "prompt": "Write an engaging, professional LinkedIn post about automating security in DevOps pipelines. Include specific tools for SAST, DAST, SCA, and CSPM that can be integrated. Mention metrics on how automated security has caught vulnerabilities before production and reduced security debt. Discuss the shift-left approach and its benefits. Use emojis and ensure good formatting with bullet points. Include hashtags related to DevSecOps, security automation, and compliance. Include a call to action for people to share their security automation tips or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and cutting-edge. The post should be at least 10-16 lines long."
     },
     {
         "title": "Infrastructure as Code Testing",
-        "prompt": "Write an engaging, professional LinkedIn post about testing Infrastructure as Code. Compare tools like Terratest, Open Policy Agent, and Checkov. Include code examples for common testing patterns. Mention metrics on how IaC testing has prevented outages and security incidents. Discuss testing in CI/CD pipelines. Use emojis and ensure good formatting with bullet points. Include hashtags related to IaC, testing, and DevOps. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and include surprising insights."
+        "prompt": "Write an engaging, professional LinkedIn post about testing Infrastructure as Code. Compare tools like Terratest, Open Policy Agent, and Checkov. Include code examples for common testing patterns. Mention metrics on how IaC testing has prevented outages and security incidents. Discuss testing in CI/CD pipelines. Use emojis and ensure good formatting with bullet points. Include hashtags related to IaC, testing, and DevOps. Include a call to action for people to share their IaC testing experiences or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and include surprising insights. The post should be at least 10-16 lines long."
     },
     {
         "title": "Serverless vs Kubernetes",
-        "prompt": "Write an engaging, provocative LinkedIn post comparing Serverless and Kubernetes approaches. Highlight the pros and cons of each in terms of operations overhead, scalability, cost, and developer experience. Include specific real-world scenarios where each approach excels. Mention performance metrics and cost comparisons. Use emojis and ensure good formatting with bullet points. Include hashtags related to Serverless, Kubernetes, and cloud architecture. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable with a slightly controversial angle."
+        "prompt": "Write an engaging, provocative LinkedIn post comparing Serverless and Kubernetes approaches. Highlight the pros and cons of each in terms of operations overhead, scalability, cost, and developer experience. Include specific real-world scenarios where each approach excels. Mention performance metrics and cost comparisons. Use emojis and ensure good formatting with bullet points. Include hashtags related to Serverless, Kubernetes, and cloud architecture. Include a call to action for people to share which they prefer and why. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable with a slightly controversial angle. The post should be at least 10-16 lines long."
     },
     {
         "title": "AI-Assisted Incident Response",
-        "prompt": "Write an engaging, professional LinkedIn post about using AI for incident response in operations. Include specific examples of how LLMs can help diagnose issues, suggest remediations, and automate runbooks. Mention metrics on MTTR reduction and case studies from major companies. Discuss the future of autonomous operations. Use emojis and ensure good formatting with bullet points. Include hashtags related to AI, AIOps, and incident management. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and cutting-edge."
+        "prompt": "Write an engaging, professional LinkedIn post about using AI for incident response in operations. Include specific examples of how LLMs can help diagnose issues, suggest remediations, and automate runbooks. Mention metrics on MTTR reduction and case studies from major companies. Discuss the future of autonomous operations. Use emojis and ensure good formatting with bullet points. Include hashtags related to AI, AIOps, and incident management. Include a call to action for people to share their AI incident response experiences or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and cutting-edge. The post should be at least 10-16 lines long."
     },
     {
         "title": "Service Mesh Evolution",
-        "prompt": "Write an engaging, professional LinkedIn post about the evolution of service mesh technologies. Compare Istio, Linkerd, and Cilium Service Mesh. Discuss performance improvements, simplified operations, and new capabilities in recent releases. Include metrics on latency impact and resource consumption. Mention when to use and when to avoid service mesh. Use emojis and ensure good formatting with bullet points. Include hashtags related to service mesh, microservices, and Kubernetes. Include a call to action directing people to automatedevops.tech. Make it sound knowledgeable and include surprising insights."
+        "prompt": "Write an engaging, professional LinkedIn post about the evolution of service mesh technologies. Compare Istio, Linkerd, and Cilium Service Mesh. Discuss performance improvements, simplified operations, and new capabilities in recent releases. Include metrics on latency impact and resource consumption. Mention when to use and when to avoid service mesh. Use emojis and ensure good formatting with bullet points. Include hashtags related to service mesh, microservices, and Kubernetes. Include a call to action for people to share their service mesh experiences or connect with you. DON'T mention automatedevops.tech website or suggest reading articles there. Make it sound knowledgeable and include surprising insights. The post should be at least 10-16 lines long."
     }
 ]
 
@@ -135,19 +135,27 @@ class GeminiContentGenerator:
             
             # Ensure content isn't too long for LinkedIn
             if len(generated_text) > 3000:
-                generated_text = generated_text[:2900] + "...\n\nLearn more at automatedevops.tech #DevOps #AI"
+                generated_text = generated_text[:2900] + "...\n\nConnect with us for more DevOps insights! #DevOps #AI"
             
             logger.info(f"Successfully generated content ({len(generated_text)} chars)")
             return generated_text
             
         except Exception as e:
             logger.error(f"Error generating content: {e}")
-            # Fallback content in case of API failure
+            # Fallback content in case of API failure - more substantial than before
             return (
                 f"🔧 DevOps Insight: {topic['title']} 🔧\n\n"
-                "Looking for expert guidance on optimizing your DevOps processes?\n\n"
-                "Visit automatedevops.tech for in-depth articles and professional services.\n\n"
-                "#DevOps #Automation #CloudNative"
+                f"Today I want to share some thoughts on {topic['title']} and how it's transforming the DevOps landscape:\n\n"
+                f"• Modern DevOps teams are increasingly adopting {topic['title']} to streamline operations\n"
+                f"• The technology enables faster deployment cycles and improved reliability\n"
+                f"• Implementation requires careful planning and expertise\n"
+                f"• Best practices include thorough testing and incremental adoption\n"
+                f"• Many organizations report 40-60% efficiency improvements\n"
+                f"• Key challenges include integration with legacy systems\n"
+                f"• Expected to become industry standard within 2-3 years\n\n"
+                f"What's your experience with {topic['title']}? Share your thoughts below!\n\n"
+                f"Connect with us to discuss your DevOps challenges and opportunities.\n\n"
+                f"#DevOps #{topic['title'].replace(' ', '')} #TechTrends #CloudNative #Automation"
             )
 
 
