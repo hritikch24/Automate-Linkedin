@@ -438,7 +438,6 @@ class GeminiContentGenerator:
         ]
         
         # Create a unique combination of points
-        timestamp = datetime.now().strftime("%H:%M:%S")
         random.shuffle(random_points)
         selected_points = random_points[:random.randint(6, 8)]
         
@@ -458,7 +457,7 @@ class GeminiContentGenerator:
         
         return (
             f"🚀 Thoughts on {topic} 🚀\n\n"
-            f"I've been thinking about {topic} lately and wanted to share some insights (generated at {timestamp}):\n\n"
+            f"I've been thinking about {topic} lately and wanted to share some insights:\n\n"
             + "\n".join(f"• {point}" for point in selected_points) + 
             f"\n\nWhat has been your experience with {topic}? What challenges have you faced?\n\n"
             f"I'd love to hear your thoughts in the comments below!\n\n"
