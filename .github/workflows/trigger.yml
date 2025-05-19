@@ -5,9 +5,9 @@ on:
     # Runs twice a week (Monday and Thursday at 12:00 PM UTC)
     - cron: '20 * * * *'
   # Run on push to main branch
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
   # Allow manual trigger
   workflow_dispatch:
 
