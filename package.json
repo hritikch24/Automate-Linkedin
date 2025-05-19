@@ -1,0 +1,16 @@
+{
+  "name": "youtube-facts-automation",
+  "version": "1.0.0",
+  "description": "Automated YouTube facts channel using GitHub Actions",
+  "main": "generate-video.js",
+  "scripts": {
+    "start": "node generate-video.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "fs-extra": "^11.1.1",
+    "googleapis": "^129.0.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "fluent-ffmpeg": "^2.1.2"
+  }
+}
