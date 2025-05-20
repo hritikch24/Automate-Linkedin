@@ -206,6 +206,46 @@
         "dateAdded": "2025-05-20T20:47:52.952Z",
         "used": true,
         "usedDate": "2025-05-20T20:47:52.952Z"
+      },
+      {
+        "text": "The ocean contains 97% of Earth's water, but only about 5% has been explored.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:59:12.155Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:59:12.155Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:59:12.155Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:59:12.155Z"
+      },
+      {
+        "text": "The blue whale, the largest animal on Earth, can produce sounds louder than a jet engine.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:59:12.155Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:59:12.155Z"
+      },
+      {
+        "text": "There are lakes and rivers beneath the ocean with their own shores, different density, and unique wildlife.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:59:12.155Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:59:12.155Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:59:12.155Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:59:12.155Z"
       }
     ]
   }
