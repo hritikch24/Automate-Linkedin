@@ -348,99 +348,114 @@ async function createFactVideo(facts, category) {
   
   // Create video with facts as text overlays
   try {
-    console.log("Creating video with facts as text overlays...");
+    console.log("Creating basic video...");
     const title = `${facts.length} Amazing ${category.toUpperCase()} Facts`;
-    await createEmptyVideo(outputPath, title, facts);
-    console.log(`Video with facts created at: ${outputPath}`);
+    await createBasicVideo(outputPath, title, facts);
+    console.log(`Video created at: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error("Error creating video with facts:", error);
+    console.error("Error creating video:", error);
     console.log("Using text file as fallback...");
     return textFilePath;
   }
 }
 
 /**
- * Creates an empty video with just a title (last resort)
+ * Creates a basic video with white background and black text
  */
-async function createEmptyVideo(outputPath, title, facts = []) {
-  console.log('Creating video with title and facts:', title);
+async function createBasicVideo(outputPath, title, facts = []) {
+  console.log('Creating white background video with black text:', title);
   
   try {
-    // Create a text file for the facts
-    const tempDir = './temp_images/';
-    await fs.ensureDir(tempDir);
+    // Create a text file with the facts for documentation
+    const factsText = facts.map((fact, index) => {
+      return `Fact ${index+1}: ${typeof fact === 'string' ? fact : (fact.text || 'Interesting fact')}`;
+    }).join('\n\n');
     
-    // Create a title overlay
-    const filterComplex = [];
+    const textFile = `${config.outputPath}facts_content.txt`;
+    await fs.writeFile(textFile, `${title}\n\n${factsText}`);
     
-    // Add title at the beginning
-    filterComplex.push(`drawtext=text='${title}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=10:x=(w-text_w)/2:y=(h-text_h)/3:enable='between(t,0,5)'`);
-    
-    // Add each fact as a text overlay at different time segments
-    if (facts && facts.length > 0) {
-      const durationPerFact = Math.floor(25 / facts.length);
-      facts.forEach((fact, index) => {
-        const factText = typeof fact === 'string' ? fact : (fact.text || 'Interesting fact');
-        // Escape single quotes in the fact text
-        const escapedText = factText.replace(/'/g, "\\'");
-        const startTime = 5 + (index * durationPerFact);
-        const endTime = startTime + durationPerFact;
-        
-        filterComplex.push(`drawtext=text='${escapedText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${startTime},${endTime})'`);
-      });
-    }
-    
-    // Join all filters with comma
-    const filterString = filterComplex.join(',');
-    
-    // Create the video with text overlays
+    // Create the most basic video possible - white background only
     await new Promise((resolve, reject) => {
       ffmpeg()
-        .input('color=c=darkblue:s=1280x720:d=30')
+        .input('color=c=white:s=1280x720:d=30')
         .inputFormat('lavfi')
-        .videoFilters(filterString)
-        .outputOptions(['-c:v libx264', '-t', '30', '-pix_fmt', 'yuv420p'])
+        .outputOptions(['-c:v libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p'])
         .output(outputPath)
-        .on('end', resolve)
+        .on('start', (commandLine) => {
+          console.log('FFmpeg command:', commandLine);
+        })
+        .on('progress', (progress) => {
+          console.log('Processing: ' + progress.percent + '% done');
+        })
+        .on('end', () => {
+          console.log('Video processing finished successfully');
+          resolve();
+        })
         .on('error', (err) => {
-          console.error('Error creating video with text:', err);
+          console.error('Error:', err);
           reject(err);
         })
         .run();
     });
     
-    console.log(`Video with text created: ${outputPath}`);
+    console.log(`White background video created: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error('Failed to create video with text:', error);
+    console.error('Failed to create white background video:', error);
     
-    // Try an even simpler approach without text
+    // Create an even simpler video as last resort
     try {
-      console.log('Attempting to create basic video without text...');
+      console.log('Trying simplest possible video generation...');
+      // Use the most minimal ffmpeg command possible
       await new Promise((resolve, reject) => {
-        ffmpeg()
-          .input('color=c=darkblue:s=1280x720:d=30')
-          .inputFormat('lavfi')
-          .outputOptions(['-c:v libx264', '-t', '30', '-pix_fmt', 'yuv420p'])
-          .output(outputPath)
-          .on('end', resolve)
-          .on('error', (err) => {
-            console.error('Error creating basic video:', err);
-            reject(err);
-          })
-          .run();
+        const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+        const { spawn } = require('child_process');
+        
+        console.log('Using ffmpeg path:', ffmpegPath);
+        
+        const args = [
+          '-f', 'lavfi',
+          '-i', 'color=c=white:s=1280x720:d=30',
+          '-c:v', 'libx264',
+          '-t', '30',
+          '-y',
+          outputPath
+        ];
+        
+        console.log('Running command:', ffmpegPath, args.join(' '));
+        
+        const process = spawn(ffmpegPath, args);
+        
+        process.stdout.on('data', (data) => {
+          console.log(`stdout: ${data}`);
+        });
+        
+        process.stderr.on('data', (data) => {
+          console.log(`stderr: ${data}`);
+        });
+        
+        process.on('close', (code) => {
+          if (code === 0) {
+            console.log(`Process exited with code ${code}`);
+            resolve();
+          } else {
+            console.error(`Process exited with code ${code}`);
+            reject(new Error(`Process exited with code ${code}`));
+          }
+        });
       });
       
-      console.log(`Basic video created: ${outputPath}`);
+      console.log('Simplest white background video created successfully');
       return outputPath;
-    } catch (basicError) {
-      console.error('Failed to create even a basic video:', basicError);
+    } catch (simpleError) {
+      console.error('Even simplest video creation failed:', simpleError);
       
-      // Last resort fallback - create a text file
-      const textFile = `${config.outputPath}${title.toLowerCase().replace(/\s+/g, '_')}.txt`;
-      await fs.writeFile(textFile, `Title: ${title}\nCreated: ${new Date().toISOString()}`);
-      return textFile;
+      // Last resort - create a text file for upload
+      const textFilePath = `${config.outputPath}${title.toLowerCase().replace(/\s+/g, '_')}.txt`;
+      await fs.writeFile(textFilePath, `${title}\n\n${factsText}\n\nCreated: ${new Date().toISOString()}`);
+      console.log(`Created text file instead: ${textFilePath}`);
+      return textFilePath;
     }
   }
 }
