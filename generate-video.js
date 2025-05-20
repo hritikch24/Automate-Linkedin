@@ -13,8 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// Import the HTML slideshow generator
-const slideshowGenerator = require('./html-slideshow-generator');
+// Import alternative approach if needed
+const alternativeSlideshowGenerator = require('./puppeteer-no-sandbox');
 const config = {
   // Use environment variables for sensitive data
   geminiApiKey: process.env.GEMINI_API_KEY,
@@ -329,7 +329,7 @@ function generateFallbackFacts(category, count) {
 }
 
 /**
- * Creates a video using HTML slideshow generator
+ * Creates a video using HTML slideshow generator or alternative approach
  */
 async function createFactVideo(facts, category) {
   const outputFileName = `${category}_${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
@@ -346,23 +346,22 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Try to create video using HTML slideshow generator
+  // Use the alternative direct FFmpeg approach
   try {
-    console.log("Using HTML slideshow generator to create video...");
+    console.log("Using alternative slideshow generator...");
     const title = `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`;
     
-    // Generate video with HTML slideshow
-    await slideshowGenerator.generateFactVideo(
-      title,
+    // Generate video with alternative approach
+    await alternativeSlideshowGenerator.createBasicSlideshowVideo(
       facts,
       category,
       outputPath
     );
     
-    console.log(`Slideshow video created at: ${outputPath}`);
+    console.log(`Alternative slideshow video created at: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error("Error using HTML slideshow generator:", error.message);
+    console.error("Error using alternative slideshow generator:", error.message);
     console.log("Falling back to basic video generation...");
     
     // Fallback to basic video generation
