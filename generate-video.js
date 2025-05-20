@@ -13,7 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// ----- CONFIGURATION -----
+// Import the HTML slideshow generator
+const slideshowGenerator = require('./html-slideshow-generator');
 const config = {
   // Use environment variables for sensitive data
   geminiApiKey: process.env.GEMINI_API_KEY,
@@ -328,7 +329,7 @@ function generateFallbackFacts(category, count) {
 }
 
 /**
- * Creates a video for a set of facts using a template
+ * Creates a video using HTML slideshow generator
  */
 async function createFactVideo(facts, category) {
   const outputFileName = `${category}_${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
@@ -338,7 +339,6 @@ async function createFactVideo(facts, category) {
   
   // Ensure output directory exists
   await fs.ensureDir(config.outputPath);
-  await fs.ensureDir('./temp_images/');
   
   // Create a text file with the facts (for record keeping)
   const factsText = facts.map((fact, index) => `Fact ${index + 1}: ${fact.text || fact}`).join('\n\n');
@@ -346,17 +346,36 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Create video with facts as text overlays
+  // Try to create video using HTML slideshow generator
   try {
-    console.log("Creating basic video...");
-    const title = `${facts.length} Amazing ${category.toUpperCase()} Facts`;
-    await createBasicVideo(outputPath, title, facts);
-    console.log(`Video created at: ${outputPath}`);
+    console.log("Using HTML slideshow generator to create video...");
+    const title = `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`;
+    
+    // Generate video with HTML slideshow
+    await slideshowGenerator.generateFactVideo(
+      title,
+      facts,
+      category,
+      outputPath
+    );
+    
+    console.log(`Slideshow video created at: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error("Error creating video:", error);
-    console.log("Using text file as fallback...");
-    return textFilePath;
+    console.error("Error using HTML slideshow generator:", error.message);
+    console.log("Falling back to basic video generation...");
+    
+    // Fallback to basic video generation
+    try {
+      console.log("Creating basic white background video...");
+      await createBasicVideo(outputPath, `${facts.length} Amazing ${category.toUpperCase()} Facts`, facts);
+      console.log(`Basic video created at: ${outputPath}`);
+      return outputPath;
+    } catch (basicError) {
+      console.error("Error creating basic video:", basicError);
+      console.log("Using text file as fallback...");
+      return textFilePath;
+    }
   }
 }
 
