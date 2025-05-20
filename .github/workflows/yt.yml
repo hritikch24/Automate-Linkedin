@@ -22,14 +22,21 @@ jobs:
         with:
           node-version: '18'
           
-      - name: Install FFmpeg
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg imagemagick
           ffmpeg -version
+          convert --version
           
-      - name: Install dependencies
-        run: npm install fs-extra axios googleapis
+          # Allow ImageMagick to read/write any size image
+          sudo sed -i 's/policy domain="resource" name="disk" value="[0-9]*GiB"/policy domain="resource" name="disk" value="8GiB"/' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/policy domain="resource" name="memory" value="[0-9]*GiB"/policy domain="resource" name="memory" value="2GiB"/' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/policy domain="resource" name="map" value="[0-9]*GiB"/policy domain="resource" name="map" value="1GiB"/' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/policy domain="resource" name="width" value="[0-9]*KP"/policy domain="resource" name="width" value="16KP"/' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/policy domain="resource" name="height" value="[0-9]*KP"/policy domain="resource" name="height" value="16KP"/' /etc/ImageMagick-6/policy.xml
+          
+          npm install fs-extra axios googleapis
         
       - name: Generate facts and create video
         env:

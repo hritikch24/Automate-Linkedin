@@ -13,8 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// Import the simplest video generator
-const simplestGenerator = require('./simplest-video-generator');
+// Import the image-based solution
+const imageBasedSolution = require('./image-based-solution');
 const config = {
   // Use environment variables for sensitive data
   geminiApiKey: process.env.GEMINI_API_KEY,
@@ -346,23 +346,23 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Use the simplest possible video generation approach
+  // Use the image-based approach
   try {
-    console.log("Using simplest possible video generation...");
+    console.log("Using image-based video generation...");
     
-    // Generate video with simplest approach
-    const result = await simplestGenerator.createSimplestVideo(
+    // Generate video with image-based approach
+    const result = await imageBasedSolution.createFactsImageVideo(
       facts,
       category,
       outputPath
     );
     
-    console.log(`Simplest video created at: ${result.videoPath}`);
+    console.log(`Image-based video created at: ${result.videoPath}`);
     console.log(`Description saved at: ${result.descriptionPath}`);
     
     return outputPath;
   } catch (error) {
-    console.error("Error using simplest video generator:", error.message);
+    console.error("Error using image-based video generator:", error.message);
     // Just return the text file path as a fallback
     console.log("Returning text file as fallback...");
     return textFilePath;
