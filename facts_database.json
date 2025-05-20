@@ -6,6 +6,47 @@
     "science": [],
     "ancient_civilizations": [],
     "space": [],
-    "ocean": []
+    "ocean": [
+      {
+        "text": "The deepest part of the ocean, the Mariana Trench, is deeper than Mount Everest is tall.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:47:18.958Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:47:18.958Z"
+      },
+      {
+        "text": "Some marine snails can surf on their own mucus to travel faster across the ocean floor.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:47:18.958Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:47:18.958Z"
+      },
+      {
+        "text": "The world's oceans contain nearly 20 million tons of gold.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:47:18.958Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:47:18.958Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:47:18.958Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:47:18.958Z"
+      },
+      {
+        "text": "There are lakes and rivers beneath the ocean with their own shores, different density, and unique wildlife.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:47:18.958Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:47:18.958Z"
+      }
+    ]
   }
 }
