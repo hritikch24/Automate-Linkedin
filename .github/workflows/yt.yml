@@ -29,7 +29,7 @@ jobs:
           ffmpeg -version
           
       - name: Install dependencies
-        run: npm install @ffmpeg-installer/ffmpeg fs-extra axios googleapis fluent-ffmpeg
+        run: npm install fs-extra axios googleapis
         
       - name: Generate facts and create video
         env:
@@ -39,6 +39,11 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: node generate-video.js
         
+      - name: List files (debugging)
+        run: |
+          echo "Showing content of output_videos directory:"
+          ls -la ./output_videos/
+          
       - name: Commit and push if facts database changed
         run: |
           git config --global user.name 'GitHub Actions Bot'

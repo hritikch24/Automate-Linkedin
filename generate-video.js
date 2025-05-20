@@ -13,8 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// Import alternative approach if needed
-const alternativeSlideshowGenerator = require('./puppeteer-no-sandbox');
+// Import the simplest video generator
+const simplestGenerator = require('./simplest-video-generator');
 const config = {
   // Use environment variables for sensitive data
   geminiApiKey: process.env.GEMINI_API_KEY,
@@ -329,7 +329,7 @@ function generateFallbackFacts(category, count) {
 }
 
 /**
- * Creates a video using HTML slideshow generator or alternative approach
+ * Creates the simplest possible video with facts in description
  */
 async function createFactVideo(facts, category) {
   const outputFileName = `${category}_${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
@@ -346,35 +346,26 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Use the alternative direct FFmpeg approach
+  // Use the simplest possible video generation approach
   try {
-    console.log("Using alternative slideshow generator...");
-    const title = `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`;
+    console.log("Using simplest possible video generation...");
     
-    // Generate video with alternative approach
-    await alternativeSlideshowGenerator.createBasicSlideshowVideo(
+    // Generate video with simplest approach
+    const result = await simplestGenerator.createSimplestVideo(
       facts,
       category,
       outputPath
     );
     
-    console.log(`Alternative slideshow video created at: ${outputPath}`);
+    console.log(`Simplest video created at: ${result.videoPath}`);
+    console.log(`Description saved at: ${result.descriptionPath}`);
+    
     return outputPath;
   } catch (error) {
-    console.error("Error using alternative slideshow generator:", error.message);
-    console.log("Falling back to basic video generation...");
-    
-    // Fallback to basic video generation
-    try {
-      console.log("Creating basic white background video...");
-      await createBasicVideo(outputPath, `${facts.length} Amazing ${category.toUpperCase()} Facts`, facts);
-      console.log(`Basic video created at: ${outputPath}`);
-      return outputPath;
-    } catch (basicError) {
-      console.error("Error creating basic video:", basicError);
-      console.log("Using text file as fallback...");
-      return textFilePath;
-    }
+    console.error("Error using simplest video generator:", error.message);
+    // Just return the text file path as a fallback
+    console.log("Returning text file as fallback...");
+    return textFilePath;
   }
 }
 
@@ -552,11 +543,8 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
       if (fileExt === 'txt') {
         const content = await fs.readFile(videoPath, 'utf8');
         console.log('Text file content:', content);
-        
-        // Create a simple video from the text as a fallback
-        const tempVideoPath = videoPath.replace('.txt', '.mp4');
-        await createEmptyVideo(tempVideoPath, title);
-        videoPath = tempVideoPath;
+        console.log('Cannot upload text file, returning error code');
+        return `ERROR_TEXT_FILE_${Date.now()}`;
       } else {
         return `ERROR_INVALID_VIDEO_${Date.now()}`;
       }
@@ -619,6 +607,14 @@ Channel URL: https://www.youtube.com/channel/${channelResponse.data.items[0].id}
       await fs.writeFile(recordFilePath, recordContent);
       console.log(`Upload record saved to: ${recordFilePath}`);
       
+      // Enhance the video with facts in description
+      await simplestGenerator.enhanceYouTubeUpload(
+        auth,
+        res.data.id,
+        [], // Will be filled from description parameter
+        "facts"
+      );
+      
       return res.data.id;
     } catch (uploadError) {
       console.error("Error during YouTube upload:", uploadError.message);
@@ -637,7 +633,7 @@ Channel URL: https://www.youtube.com/channel/${channelResponse.data.items[0].id}
           requestBody: {
             snippet: {
               title: title.substring(0, 100), // Ensure title isn't too long
-              description: "Auto-generated facts video",
+              description: description || "Auto-generated facts video",
               categoryId: "22" // People & Blogs category as fallback
             },
             status: {
