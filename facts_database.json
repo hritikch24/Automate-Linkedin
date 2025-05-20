@@ -166,6 +166,46 @@
         "dateAdded": "2025-05-20T20:43:56.763Z",
         "used": true,
         "usedDate": "2025-05-20T20:43:56.763Z"
+      },
+      {
+        "text": "The ocean contains 97% of Earth's water, but only about 5% has been explored.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:47:52.952Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:47:52.952Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:47:52.952Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:47:52.952Z"
+      },
+      {
+        "text": "The Mid-Ocean Ridge is the longest mountain range on Earth, stretching over 40,000 miles.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:47:52.952Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:47:52.952Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:47:52.952Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:47:52.952Z"
+      },
+      {
+        "text": "Some marine snails can surf on their own mucus to travel faster across the ocean floor.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:47:52.952Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:47:52.952Z"
       }
     ]
   }
