@@ -46,6 +46,46 @@
         "dateAdded": "2025-05-20T19:47:18.958Z",
         "used": true,
         "usedDate": "2025-05-20T19:47:18.958Z"
+      },
+      {
+        "text": "The Mid-Ocean Ridge is the longest mountain range on Earth, stretching over 40,000 miles.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:53:05.866Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:53:05.866Z"
+      },
+      {
+        "text": "The world's oceans contain nearly 20 million tons of gold.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:53:05.866Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:53:05.866Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:53:05.866Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:53:05.866Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:53:05.866Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:53:05.866Z"
+      },
+      {
+        "text": "Some marine snails can surf on their own mucus to travel faster across the ocean floor.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T19:53:05.866Z",
+        "used": true,
+        "usedDate": "2025-05-20T19:53:05.866Z"
       }
     ]
   }
