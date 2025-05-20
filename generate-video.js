@@ -1,4 +1,9 @@
-// generate-video.js - GitHub Actions compatible version
+/**
+ * Authenticates with YouTube API using stored refresh token
+ */
+async function authenticateYouTube() {
+  return await getYouTubeAuthInfo();
+}// generate-video.js - GitHub Actions compatible version
 
 const fs = require('fs-extra');
 const axios = require('axios');
@@ -528,28 +533,47 @@ async function createEmptyVideo(outputPath, title) {
 // ----- YOUTUBE INTEGRATION -----
 
 /**
- * Authenticates with YouTube API using stored refresh token
+ * Gets token information from YouTube authentication
  */
-async function authenticateYouTube() {
-  const oauth2Client = new google.auth.OAuth2(
-    config.youtubeClientId,
-    config.youtubeClientSecret,
-    'http://localhost:3000/oauth2callback'
-  );
-  
-  // Use refresh token from environment variable
-  oauth2Client.setCredentials({
-    refresh_token: config.youtubeRefreshToken
-  });
-  
+async function getYouTubeAuthInfo() {
   try {
-    // Force token refresh
-    const tokens = await oauth2Client.refreshAccessToken();
-    oauth2Client.setCredentials(tokens.credentials);
-    console.log("YouTube API authentication successful");
+    const oauth2Client = new google.auth.OAuth2(
+      config.youtubeClientId,
+      config.youtubeClientSecret,
+      'http://localhost:3000/oauth2callback'
+    );
+    
+    // Use refresh token from environment variable
+    oauth2Client.setCredentials({
+      refresh_token: config.youtubeRefreshToken
+    });
+    
+    console.log("Attempting to get access token...");
+    
+    // Force token refresh to get new access token
+    const tokens = await oauth2Client.refreshAccessToken()
+      .catch(error => {
+        console.error("Error refreshing token:", error.message);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        throw error;
+      });
+    
+    console.log("Token refresh successful!");
+    
+    // Log token info (safely)
+    const accessToken = tokens.credentials.access_token;
+    const maskedToken = accessToken ? 
+      accessToken.substring(0, 5) + "..." + accessToken.substring(accessToken.length - 5) : 
+      "UNDEFINED";
+    
+    console.log(`Access token (masked): ${maskedToken}`);
+    console.log(`Token expiry: ${new Date(tokens.credentials.expiry_date).toISOString()}`);
+    console.log(`Refresh token exists: ${!!tokens.credentials.refresh_token}`);
+    
     return oauth2Client;
   } catch (error) {
-    console.error("Error refreshing YouTube token:", error.message);
+    console.error("Authentication error:", error.message);
+    console.error("Make sure YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, and YOUTUBE_REFRESH_TOKEN are set correctly");
     throw error;
   }
 }
@@ -591,6 +615,22 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
     }
     
     try {
+      // First, get the channel info to display the channel URL
+      const channelResponse = await youtube.channels.list({
+        auth,
+        part: 'snippet',
+        mine: true
+      });
+      
+      if (channelResponse.data.items && channelResponse.data.items.length > 0) {
+        const channelId = channelResponse.data.items[0].id;
+        const channelTitle = channelResponse.data.items[0].snippet.title;
+        console.log('==============================================');
+        console.log(`YOUTUBE CHANNEL: ${channelTitle}`);
+        console.log(`CHANNEL URL: https://www.youtube.com/channel/${channelId}`);
+        console.log('==============================================');
+      }
+      
       // Attempt the actual upload
       const res = await youtube.videos.insert({
         auth,
@@ -603,7 +643,7 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
             categoryId
           },
           status: {
-            privacyStatus: 'unlisted'  // Use unlisted for initial testing
+            privacyStatus: 'public'  // Make it public so it's easier to find
           }
         },
         media: {
@@ -611,8 +651,26 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
         }
       });
       
-      console.log(`Video uploaded successfully. Video ID: ${res.data.id}`);
-      console.log(`Video URL: https://www.youtube.com/watch?v=${res.data.id}`);
+      console.log('==============================================');
+      console.log(`VIDEO UPLOADED SUCCESSFULLY!`);
+      console.log(`VIDEO TITLE: ${title}`);
+      console.log(`VIDEO ID: ${res.data.id}`);
+      console.log(`VIDEO URL: https://www.youtube.com/watch?v=${res.data.id}`);
+      console.log('==============================================');
+      
+      // Create a record file with all the information
+      const recordFilePath = `${config.outputPath}upload_record_${Date.now()}.txt`;
+      const recordContent = `
+Upload Date: ${new Date().toISOString()}
+Video Title: ${title}
+Video ID: ${res.data.id}
+Video URL: https://www.youtube.com/watch?v=${res.data.id}
+Channel URL: https://www.youtube.com/channel/${channelResponse.data.items[0].id}
+`;
+      
+      await fs.writeFile(recordFilePath, recordContent);
+      console.log(`Upload record saved to: ${recordFilePath}`);
+      
       return res.data.id;
     } catch (uploadError) {
       console.error("Error during YouTube upload:", uploadError.message);
@@ -635,7 +693,7 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
               categoryId: "22" // People & Blogs category as fallback
             },
             status: {
-              privacyStatus: 'unlisted'
+              privacyStatus: 'public'
             }
           },
           media: {
@@ -643,7 +701,12 @@ async function uploadToYouTube(videoPath, title, description, tags, categoryId =
           }
         });
         
-        console.log(`Simplified upload successful. Video ID: ${simplifiedRes.data.id}`);
+        console.log('==============================================');
+        console.log(`SIMPLIFIED UPLOAD SUCCESSFUL!`);
+        console.log(`VIDEO ID: ${simplifiedRes.data.id}`);
+        console.log(`VIDEO URL: https://www.youtube.com/watch?v=${simplifiedRes.data.id}`);
+        console.log('==============================================');
+        
         return simplifiedRes.data.id;
       } catch (simplifiedError) {
         console.error("Simplified upload also failed:", simplifiedError.message);
@@ -762,10 +825,47 @@ async function createAndUploadVideo(category) {
 async function main() {
   try {
     console.log("Starting YouTube Facts Video Automation...");
+    console.log("Current date/time:", new Date().toISOString());
+    
+    // Check configuration
+    console.log("Checking configuration...");
+    console.log("Gemini API Key exists:", !!config.geminiApiKey);
+    console.log("YouTube Client ID exists:", !!config.youtubeClientId);
+    console.log("YouTube Client Secret exists:", !!config.youtubeClientSecret);
+    console.log("YouTube Refresh Token exists:", !!config.youtubeRefreshToken);
     
     // Ensure directories exist
     await fs.ensureDir(config.outputPath);
     await fs.ensureDir(config.videoTemplatesPath);
+    
+    // Test YouTube Authentication first
+    console.log("Testing YouTube authentication...");
+    try {
+      const auth = await getYouTubeAuthInfo();
+      console.log("YouTube authentication successful!");
+      
+      // Get channel info
+      const youtube = google.youtube('v3');
+      const channelResponse = await youtube.channels.list({
+        auth,
+        part: 'snippet',
+        mine: true
+      });
+      
+      if (channelResponse.data.items && channelResponse.data.items.length > 0) {
+        const channelId = channelResponse.data.items[0].id;
+        const channelTitle = channelResponse.data.items[0].snippet.title;
+        console.log('==============================================');
+        console.log(`YOUTUBE CHANNEL: ${channelTitle}`);
+        console.log(`CHANNEL URL: https://www.youtube.com/channel/${channelId}`);
+        console.log('==============================================');
+      } else {
+        console.log("No channel found for this account!");
+      }
+    } catch (authError) {
+      console.error("YouTube authentication failed:", authError.message);
+      console.log("Will continue with other tasks...");
+    }
     
     // Check if facts database exists, create if not
     const databaseExists = await fs.pathExists(config.factsDatabasePath);
