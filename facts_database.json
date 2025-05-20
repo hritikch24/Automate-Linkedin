@@ -126,6 +126,46 @@
         "dateAdded": "2025-05-20T20:04:15.870Z",
         "used": true,
         "usedDate": "2025-05-20T20:04:15.870Z"
+      },
+      {
+        "text": "The deepest part of the ocean, the Mariana Trench, is deeper than Mount Everest is tall.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:43:56.763Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:43:56.763Z"
+      },
+      {
+        "text": "The ocean contains 97% of Earth's water, but only about 5% has been explored.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:43:56.763Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:43:56.763Z"
+      },
+      {
+        "text": "Some species of deep-sea creatures can live without oxygen, using sulfur compounds instead.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:43:56.763Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:43:56.763Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:43:56.763Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:43:56.763Z"
+      },
+      {
+        "text": "There are lakes and rivers beneath the ocean with their own shores, different density, and unique wildlife.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:43:56.763Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:43:56.763Z"
       }
     ]
   }
