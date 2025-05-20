@@ -51,10 +51,19 @@ jobs:
           echo "Showing content of output_videos directory:"
           ls -la ./output_videos/
           
-      - name: Commit and push if facts database changed
+      - name: Commit and push changes
         run: |
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
+          
+          # Add all files in output_videos directory
+          git add output_videos/
           git add facts_database.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update facts database [automated]"
-          git push
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update facts database and add video files [automated]"
+            git push
+          fi
