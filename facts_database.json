@@ -86,6 +86,46 @@
         "dateAdded": "2025-05-20T19:53:05.866Z",
         "used": true,
         "usedDate": "2025-05-20T19:53:05.866Z"
+      },
+      {
+        "text": "The blue whale, the largest animal on Earth, can produce sounds louder than a jet engine.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:04:15.870Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:04:15.870Z"
+      },
+      {
+        "text": "There are lakes and rivers beneath the ocean with their own shores, different density, and unique wildlife.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:04:15.870Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:04:15.870Z"
+      },
+      {
+        "text": "The Mid-Ocean Ridge is the longest mountain range on Earth, stretching over 40,000 miles.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:04:15.870Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:04:15.870Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:04:15.870Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:04:15.870Z"
+      },
+      {
+        "text": "Some species of deep-sea creatures can live without oxygen, using sulfur compounds instead.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-20T20:04:15.870Z",
+        "used": true,
+        "usedDate": "2025-05-20T20:04:15.870Z"
       }
     ]
   }
