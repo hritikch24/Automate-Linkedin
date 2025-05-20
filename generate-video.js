@@ -346,15 +346,15 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Skip actual video creation and just create a simple video with a title
-  // This is more reliable on GitHub Actions
+  // Create video with facts as text overlays
   try {
-    console.log("Creating simple title video...");
-    await createEmptyVideo(outputPath, `${category.toUpperCase()} FACTS`);
-    console.log(`Simple video created at: ${outputPath}`);
+    console.log("Creating video with facts as text overlays...");
+    const title = `${facts.length} Amazing ${category.toUpperCase()} Facts`;
+    await createEmptyVideo(outputPath, title, facts);
+    console.log(`Video with facts created at: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error("Error creating simple video:", error);
+    console.error("Error creating video with facts:", error);
     console.log("Using text file as fallback...");
     return textFilePath;
   }
@@ -363,35 +363,85 @@ async function createFactVideo(facts, category) {
 /**
  * Creates an empty video with just a title (last resort)
  */
-async function createEmptyVideo(outputPath, title) {
-  console.log('Creating empty video with title:', title);
+async function createEmptyVideo(outputPath, title, facts = []) {
+  console.log('Creating video with title and facts:', title);
   
   try {
-    // Create a very simple video using the simplest possible ffmpeg command
-    // This should work on GitHub Actions with minimal dependencies
+    // Create a text file for the facts
+    const tempDir = './temp_images/';
+    await fs.ensureDir(tempDir);
+    
+    // Create a title overlay
+    const filterComplex = [];
+    
+    // Add title at the beginning
+    filterComplex.push(`drawtext=text='${title}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=10:x=(w-text_w)/2:y=(h-text_h)/3:enable='between(t,0,5)'`);
+    
+    // Add each fact as a text overlay at different time segments
+    if (facts && facts.length > 0) {
+      const durationPerFact = Math.floor(25 / facts.length);
+      facts.forEach((fact, index) => {
+        const factText = typeof fact === 'string' ? fact : (fact.text || 'Interesting fact');
+        // Escape single quotes in the fact text
+        const escapedText = factText.replace(/'/g, "\\'");
+        const startTime = 5 + (index * durationPerFact);
+        const endTime = startTime + durationPerFact;
+        
+        filterComplex.push(`drawtext=text='${escapedText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${startTime},${endTime})'`);
+      });
+    }
+    
+    // Join all filters with comma
+    const filterString = filterComplex.join(',');
+    
+    // Create the video with text overlays
     await new Promise((resolve, reject) => {
       ffmpeg()
         .input('color=c=darkblue:s=1280x720:d=30')
         .inputFormat('lavfi')
+        .videoFilters(filterString)
         .outputOptions(['-c:v libx264', '-t', '30', '-pix_fmt', 'yuv420p'])
         .output(outputPath)
         .on('end', resolve)
         .on('error', (err) => {
-          console.error('Error creating empty video:', err);
+          console.error('Error creating video with text:', err);
           reject(err);
         })
         .run();
     });
     
-    console.log(`Empty video created: ${outputPath}`);
+    console.log(`Video with text created: ${outputPath}`);
     return outputPath;
   } catch (error) {
-    console.error('Failed to create empty video:', error);
+    console.error('Failed to create video with text:', error);
     
-    // Last resort fallback - create a text file
-    const textFile = `${config.outputPath}${title.toLowerCase().replace(/\s+/g, '_')}.txt`;
-    await fs.writeFile(textFile, `Title: ${title}\nCreated: ${new Date().toISOString()}`);
-    return textFile;
+    // Try an even simpler approach without text
+    try {
+      console.log('Attempting to create basic video without text...');
+      await new Promise((resolve, reject) => {
+        ffmpeg()
+          .input('color=c=darkblue:s=1280x720:d=30')
+          .inputFormat('lavfi')
+          .outputOptions(['-c:v libx264', '-t', '30', '-pix_fmt', 'yuv420p'])
+          .output(outputPath)
+          .on('end', resolve)
+          .on('error', (err) => {
+            console.error('Error creating basic video:', err);
+            reject(err);
+          })
+          .run();
+      });
+      
+      console.log(`Basic video created: ${outputPath}`);
+      return outputPath;
+    } catch (basicError) {
+      console.error('Failed to create even a basic video:', basicError);
+      
+      // Last resort fallback - create a text file
+      const textFile = `${config.outputPath}${title.toLowerCase().replace(/\s+/g, '_')}.txt`;
+      await fs.writeFile(textFile, `Title: ${title}\nCreated: ${new Date().toISOString()}`);
+      return textFile;
+    }
   }
 }
 
