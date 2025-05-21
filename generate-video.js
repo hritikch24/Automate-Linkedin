@@ -13,8 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// Import the image-based solution
-const imageBasedSolution = require('./image-based-solution');
+// Import the frame-based solution for videos with visible facts
+const frameBasedSolution = require('./frame-based-solution');
 const config = {
   // Use environment variables for sensitive data
   geminiApiKey: process.env.GEMINI_API_KEY,
@@ -329,7 +329,7 @@ function generateFallbackFacts(category, count) {
 }
 
 /**
- * Creates the simplest possible video with facts in description
+ * Creates a video with facts text displayed in the video
  */
 async function createFactVideo(facts, category) {
   const outputFileName = `${category}_${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
@@ -346,23 +346,23 @@ async function createFactVideo(facts, category) {
   await fs.writeFile(textFilePath, factsText);
   console.log(`Created facts text file: ${textFilePath}`);
   
-  // Use the image-based approach
+  // Use the frame-based approach for displaying facts in the video
   try {
-    console.log("Using image-based video generation...");
+    console.log("Using frame-based video generation with visible facts text...");
     
-    // Generate video with image-based approach
-    const result = await imageBasedSolution.createFactsImageVideo(
+    // Generate video with frame-based approach
+    const result = await frameBasedSolution.createFrameBasedVideo(
       facts,
       category,
       outputPath
     );
     
-    console.log(`Image-based video created at: ${result.videoPath}`);
+    console.log(`Frame-based video created at: ${result.videoPath}`);
     console.log(`Description saved at: ${result.descriptionPath}`);
     
     return outputPath;
   } catch (error) {
-    console.error("Error using image-based video generator:", error.message);
+    console.error("Error using frame-based video generator:", error.message);
     // Just return the text file path as a fallback
     console.log("Returning text file as fallback...");
     return textFilePath;
