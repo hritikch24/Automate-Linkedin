@@ -1,7 +1,48 @@
 {
   "lastUpdated": "2025-05-20T19:37:35.431Z",
   "categories": {
-    "history": [],
+    "history": [
+      {
+        "text": "Vikings used the bones of slain animals to make their weapons stronger.",
+        "category": "history",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T07:31:15.819Z",
+        "used": true,
+        "usedDate": "2025-05-21T07:31:15.819Z"
+      },
+      {
+        "text": "Ancient Egyptians used to sleep on pillows made of stone.",
+        "category": "history",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T07:31:15.819Z",
+        "used": true,
+        "usedDate": "2025-05-21T07:31:15.819Z"
+      },
+      {
+        "text": "Harvard University was founded before calculus was invented.",
+        "category": "history",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T07:31:15.819Z",
+        "used": true,
+        "usedDate": "2025-05-21T07:31:15.819Z"
+      },
+      {
+        "text": "Napoleon was actually of average height for his time (5'7\"), not short as commonly believed.",
+        "category": "history",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T07:31:15.819Z",
+        "used": true,
+        "usedDate": "2025-05-21T07:31:15.819Z"
+      },
+      {
+        "text": "The first recorded Olympic Games were held in 776 BCE in Olympia, Greece.",
+        "category": "history",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T07:31:15.819Z",
+        "used": true,
+        "usedDate": "2025-05-21T07:31:15.819Z"
+      }
+    ],
     "geography": [],
     "science": [],
     "ancient_civilizations": [],
