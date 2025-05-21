@@ -83,7 +83,48 @@
         "usedDate": "2025-05-21T10:13:35.692Z"
       }
     ],
-    "geography": [],
+    "geography": [
+      {
+        "text": "The Maldives is the flattest and lowest-lying country in the world.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T17:12:18.704Z",
+        "used": true,
+        "usedDate": "2025-05-21T17:12:18.704Z"
+      },
+      {
+        "text": "Point Nemo in the Pacific Ocean is the most remote place on Earth, with the nearest humans often being astronauts on the ISS.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T17:12:18.704Z",
+        "used": true,
+        "usedDate": "2025-05-21T17:12:18.704Z"
+      },
+      {
+        "text": "Alaska has more coastline than all other U.S. states combined.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T17:12:18.704Z",
+        "used": true,
+        "usedDate": "2025-05-21T17:12:18.704Z"
+      },
+      {
+        "text": "The continent of Asia covers about 30% of Earth's total land area.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T17:12:18.704Z",
+        "used": true,
+        "usedDate": "2025-05-21T17:12:18.704Z"
+      },
+      {
+        "text": "Brazil shares a border with every South American country except Chile and Ecuador.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-21T17:12:18.704Z",
+        "used": true,
+        "usedDate": "2025-05-21T17:12:18.704Z"
+      }
+    ],
     "science": [],
     "ancient_civilizations": [],
     "space": [],
