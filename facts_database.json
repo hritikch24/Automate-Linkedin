@@ -125,7 +125,48 @@
         "usedDate": "2025-05-21T17:12:18.704Z"
       }
     ],
-    "science": [],
+    "science": [
+      {
+        "text": "A bolt of lightning is five times hotter than the surface of the sun.",
+        "category": "science",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-22T10:13:48.488Z",
+        "used": true,
+        "usedDate": "2025-05-22T10:13:48.488Z"
+      },
+      {
+        "text": "Bananas are berries, but strawberries aren't actually berries at all.",
+        "category": "science",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-22T10:13:48.488Z",
+        "used": true,
+        "usedDate": "2025-05-22T10:13:48.488Z"
+      },
+      {
+        "text": "Octopuses have three hearts, nine brains, and blue blood.",
+        "category": "science",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-22T10:13:48.488Z",
+        "used": true,
+        "usedDate": "2025-05-22T10:13:48.488Z"
+      },
+      {
+        "text": "The shortest scientific paper ever published contained just two sentences.",
+        "category": "science",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-22T10:13:48.488Z",
+        "used": true,
+        "usedDate": "2025-05-22T10:13:48.488Z"
+      },
+      {
+        "text": "A day on Venus is longer than a year on Venus. It takes 243 Earth days to rotate once on its axis and 225 Earth days to orbit the sun.",
+        "category": "science",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-22T10:13:48.488Z",
+        "used": true,
+        "usedDate": "2025-05-22T10:13:48.488Z"
+      }
+    ],
     "ancient_civilizations": [],
     "space": [],
     "ocean": [
