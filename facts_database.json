@@ -531,6 +531,46 @@
         "dateAdded": "2025-05-20T21:03:09.476Z",
         "used": true,
         "usedDate": "2025-05-20T21:03:09.476Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T17:11:26.798Z",
+        "used": true,
+        "usedDate": "2025-05-23T17:11:26.798Z"
+      },
+      {
+        "text": "The ocean contains 97% of Earth's water, but only about 5% has been explored.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T17:11:26.798Z",
+        "used": true,
+        "usedDate": "2025-05-23T17:11:26.798Z"
+      },
+      {
+        "text": "There are more historical artifacts under the ocean than in all museums worldwide combined.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T17:11:26.798Z",
+        "used": true,
+        "usedDate": "2025-05-23T17:11:26.798Z"
+      },
+      {
+        "text": "The deepest part of the ocean, the Mariana Trench, is deeper than Mount Everest is tall.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T17:11:26.798Z",
+        "used": true,
+        "usedDate": "2025-05-23T17:11:26.798Z"
+      },
+      {
+        "text": "The world's oceans contain nearly 20 million tons of gold.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T17:11:26.798Z",
+        "used": true,
+        "usedDate": "2025-05-23T17:11:26.798Z"
       }
     ]
   }
