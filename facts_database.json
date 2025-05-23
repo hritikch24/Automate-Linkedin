@@ -209,7 +209,48 @@
         "usedDate": "2025-05-22T17:11:06.805Z"
       }
     ],
-    "space": [],
+    "space": [
+      {
+        "text": "The footprints left on the Moon will remain there for at least 100 million years.",
+        "category": "space",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T10:13:44.381Z",
+        "used": true,
+        "usedDate": "2025-05-23T10:13:44.381Z"
+      },
+      {
+        "text": "A year on Neptune lasts for 165 Earth years.",
+        "category": "space",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T10:13:44.381Z",
+        "used": true,
+        "usedDate": "2025-05-23T10:13:44.381Z"
+      },
+      {
+        "text": "Mercury and Venus are the only planets in our solar system with no moons.",
+        "category": "space",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T10:13:44.381Z",
+        "used": true,
+        "usedDate": "2025-05-23T10:13:44.381Z"
+      },
+      {
+        "text": "There is a planet made of diamonds, called 55 Cancri e.",
+        "category": "space",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T10:13:44.381Z",
+        "used": true,
+        "usedDate": "2025-05-23T10:13:44.381Z"
+      },
+      {
+        "text": "Saturn's rings are mostly made of ice and are only about 10 meters thick on average.",
+        "category": "space",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-23T10:13:44.381Z",
+        "used": true,
+        "usedDate": "2025-05-23T10:13:44.381Z"
+      }
+    ],
     "ocean": [
       {
         "text": "The deepest part of the ocean, the Mariana Trench, is deeper than Mount Everest is tall.",
