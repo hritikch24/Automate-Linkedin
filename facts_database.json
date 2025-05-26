@@ -771,6 +771,46 @@
         "dateAdded": "2025-05-23T17:11:26.798Z",
         "used": true,
         "usedDate": "2025-05-23T17:11:26.798Z"
+      },
+      {
+        "text": "The blue whale, the largest animal on Earth, can produce sounds louder than a jet engine.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-26T17:10:31.982Z",
+        "used": true,
+        "usedDate": "2025-05-26T17:10:31.982Z"
+      },
+      {
+        "text": "The deepest part of the ocean, the Mariana Trench, is deeper than Mount Everest is tall.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-26T17:10:31.982Z",
+        "used": true,
+        "usedDate": "2025-05-26T17:10:31.982Z"
+      },
+      {
+        "text": "There are lakes and rivers beneath the ocean with their own shores, different density, and unique wildlife.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-26T17:10:31.982Z",
+        "used": true,
+        "usedDate": "2025-05-26T17:10:31.982Z"
+      },
+      {
+        "text": "The Great Barrier Reef is the largest living structure on Earth, visible even from space.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-26T17:10:31.982Z",
+        "used": true,
+        "usedDate": "2025-05-26T17:10:31.982Z"
+      },
+      {
+        "text": "The Mid-Ocean Ridge is the longest mountain range on Earth, stretching over 40,000 miles.",
+        "category": "ocean",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-26T17:10:31.982Z",
+        "used": true,
+        "usedDate": "2025-05-26T17:10:31.982Z"
       }
     ]
   }
