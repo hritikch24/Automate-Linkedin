@@ -363,6 +363,46 @@
         "dateAdded": "2025-05-27T17:11:09.970Z",
         "used": true,
         "usedDate": "2025-05-27T17:11:09.970Z"
+      },
+      {
+        "text": "Vatican City is the smallest country in the world, at just 44 hectares (109 acres).",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-30T17:10:44.616Z",
+        "used": true,
+        "usedDate": "2025-05-30T17:10:44.616Z"
+      },
+      {
+        "text": "Alaska has more coastline than all other U.S. states combined.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-30T17:10:44.616Z",
+        "used": true,
+        "usedDate": "2025-05-30T17:10:44.616Z"
+      },
+      {
+        "text": "The Maldives is the flattest and lowest-lying country in the world.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-30T17:10:44.616Z",
+        "used": true,
+        "usedDate": "2025-05-30T17:10:44.616Z"
+      },
+      {
+        "text": "Russia borders 14 different countries, more than any other nation.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-30T17:10:44.616Z",
+        "used": true,
+        "usedDate": "2025-05-30T17:10:44.616Z"
+      },
+      {
+        "text": "Brazil shares a border with every South American country except Chile and Ecuador.",
+        "category": "geography",
+        "verificationScore": 3,
+        "dateAdded": "2025-05-30T17:10:44.616Z",
+        "used": true,
+        "usedDate": "2025-05-30T17:10:44.616Z"
       }
     ],
     "science": [
