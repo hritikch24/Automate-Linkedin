@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 LinkedIn DevOps Post Automation with Gemini AI Content Generation and Quality Review
+Enhanced with Reach-Boosting Engagement Elements
 ---------------------------------------------------------------------------------
 This script automatically generates unique DevOps content using Gemini AI and posts it to LinkedIn.
 It uses Gemini to critically review its own posts before publishing to ensure high quality.
 It checks for similarity with previous posts to avoid repetition.
+Enhanced with engagement-boosting elements to increase reach and generate leads.
 
 Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
@@ -38,17 +40,90 @@ TECH_CATEGORIES = [
     "AWS", "Azure", "GCP", "Containers", "Microservices"
 ]
 
-# Meta-prompts for Gemini to generate unique content
+# Enhanced meta-prompts with engagement boosters
 META_PROMPTS = [
-    "Generate a unique, engaging LinkedIn post about {topic} with the latest trends, best practices, and controversial opinions. Include specific tools, metrics, and real-world examples. Format with emojis and bullet points. Include hashtags and a call to action for comments or connections. Make it 10-16 lines long and professional but attention-grabbing.",
+    """Generate a unique, engaging LinkedIn post about {topic} with the latest trends, best practices, and controversial opinions. Include specific tools, metrics, and real-world examples. 
     
-    "Create a thought-provoking LinkedIn post comparing different approaches to {topic}. Highlight pros, cons, and specific use cases for each approach. Include surprising statistics and industry trends. Format with emojis and bullet points. Include relevant hashtags and ask readers to share their experiences. Make it 10-16 lines long and informative yet engaging.",
+    IMPORTANT: End with strong engagement hooks like:
+    - "What's been your biggest challenge with this? Drop a comment below!"
+    - "DM me if you want to discuss implementation strategies for your team"
+    - "Have you seen better results with different approaches? Let's connect!"
     
-    "Write a technical LinkedIn post about solving common challenges in {topic}. Include specific tools, techniques, and code examples where relevant. Mention performance improvements and reliability gains. Format with emojis and bullet points. Add relevant hashtags and invite readers to discuss their own solutions. Make it 10-16 lines long and technically substantial but accessible.",
+    Format with emojis and bullet points. Include hashtags. Make it 12-18 lines long and professional but attention-grabbing.""",
     
-    "Craft a forward-looking LinkedIn post about the future of {topic} in the next 2-3 years. Discuss emerging trends, tools, and practices that will become mainstream. Include specific predictions with reasoning. Format with emojis and bullet points. Use relevant hashtags and ask readers what they think about these predictions. Make it 10-16 lines long and thought-provoking.",
+    """Create a thought-provoking LinkedIn post comparing different approaches to {topic}. Highlight pros, cons, and specific use cases for each approach. Include surprising statistics and industry trends.
     
-    "Write a LinkedIn post highlighting common mistakes and misconceptions about {topic}. Explain the correct approaches and why they matter. Include real-world consequences of these mistakes. Format with emojis and bullet points. Add relevant hashtags and invite readers to share mistakes they've encountered. Make it 10-16 lines long and educational yet engaging."
+    IMPORTANT: Include engagement elements like:
+    - "Which approach has worked best for your organization? Share your experience!"
+    - "Struggling with this decision? DM me for a quick consultation"
+    - "Tag someone who needs to see this comparison!"
+    
+    Format with emojis and bullet points. Include relevant hashtags. Make it 12-18 lines long.""",
+    
+    """Write a technical LinkedIn post about solving common challenges in {topic}. Include specific tools, techniques, and code examples where relevant. Mention performance improvements and reliability gains.
+    
+    IMPORTANT: Add service-oriented CTAs like:
+    - "Need help implementing this in your environment? Let's talk!"
+    - "DM me if you want a free consultation on optimizing your setup"
+    - "Facing similar challenges? Connect with me for solutions!"
+    
+    Format with emojis and bullet points. Make it 12-18 lines long and technically substantial but accessible.""",
+    
+    """Craft a forward-looking LinkedIn post about the future of {topic} in the next 2-3 years. Discuss emerging trends, tools, and practices that will become mainstream. Include specific predictions with reasoning.
+    
+    IMPORTANT: Include thought leadership CTAs:
+    - "What trends are you most excited about? Share your predictions!"
+    - "Planning your roadmap for these changes? DM me for strategic guidance"
+    - "Agree or disagree with these predictions? Let's debate in the comments!"
+    
+    Format with emojis and bullet points. Make it 12-18 lines long and thought-provoking.""",
+    
+    """Write a LinkedIn post highlighting common mistakes and misconceptions about {topic}. Explain the correct approaches and why they matter. Include real-world consequences of these mistakes.
+    
+    IMPORTANT: Add problem-solving CTAs:
+    - "Made any of these mistakes? You're not alone - let's fix them together!"
+    - "DM me if you're dealing with these issues - I can help you avoid the pitfalls"
+    - "What other mistakes have you seen? Share them below!"
+    
+    Format with emojis and bullet points. Make it 12-18 lines long and educational yet engaging."""
+]
+
+# Engagement boosting elements
+ENGAGEMENT_HOOKS = [
+    "💬 What's your experience with this? Drop a comment!",
+    "🔥 Tag someone who needs to see this!",
+    "💡 Have a different approach? I'd love to hear it!",
+    "🚀 What challenges are you facing with this? Let's discuss!",
+    "⚡ Agree or disagree? Let's debate in the comments!",
+    "🎯 What's your biggest pain point here? Share below!",
+    "🛠️ Which tools have worked best for you?",
+    "📈 What results have you seen with this approach?",
+    "🤔 What would you add to this list?",
+    "💪 Ready to level up your game? Let's connect!"
+]
+
+SERVICE_ORIENTED_CTAS = [
+    "🔥 Need help implementing this? DM me for a free consultation!",
+    "💼 Struggling with your DevOps transformation? Let's chat about solutions!",
+    "⚡ Want to accelerate your cloud journey? Send me a message!",
+    "🎯 Looking for expert guidance on this? DM me - I help teams just like yours!",
+    "🚀 Ready to optimize your infrastructure? Let's discuss your specific needs!",
+    "💡 Need a strategy session? DM me for personalized recommendations!",
+    "🛠️ Want hands-on help with implementation? Let's talk about your project!",
+    "📈 Looking to improve your metrics? I can show you proven strategies!",
+    "⭐ Need a DevOps audit or consultation? Message me for details!",
+    "🔧 Facing technical challenges? I specialize in solving exactly these problems!"
+]
+
+URGENCY_CREATORS = [
+    "🔥 Limited time: Free consultation this week only!",
+    "⚡ Early bird special: Connect now for priority response!",
+    "🎯 This week only: Free architecture review for qualified teams!",
+    "🚀 Quick wins available: Let's identify your lowest-hanging fruit!",
+    "💎 Exclusive offer: Free 30-min strategy session this month!",
+    "⭐ Special opportunity: Connect now for custom recommendations!",
+    "🔥 Act fast: Limited slots for new consultations!",
+    "💡 Time-sensitive: Free assessment ends this Friday!"
 ]
 
 
@@ -155,7 +230,7 @@ class PostHistoryManager:
 
 
 class GeminiContentGenerator:
-    """Generates unique DevOps content using Gemini AI."""
+    """Generates unique DevOps content using Gemini AI with engagement boosters."""
     
     def __init__(self, api_key: str, history_manager: PostHistoryManager):
         """
@@ -190,7 +265,7 @@ class GeminiContentGenerator:
         
         The topic should be specific (not general like just "Kubernetes" but rather something like "Kubernetes HPA vs. KEDA for autoscaling").
         
-        It should be about something current and relevant in the tech industry.
+        It should be about something current and relevant in the tech industry that could generate engagement and discussion.
         
         DO NOT include any explanations, just return the topic as a short title (5-10 words).
         
@@ -294,6 +369,74 @@ class GeminiContentGenerator:
         logger.info(f"Generated fallback topic: {topic}")
         return topic
     
+    def _enhance_content_with_engagement_boosters(self, content: str, topic: str) -> str:
+        """
+        Enhance content with engagement-boosting elements.
+        
+        Args:
+            content: Original content
+            topic: Post topic
+            
+        Returns:
+            Enhanced content with engagement elements
+        """
+        # Decide what type of engagement elements to add based on randomization
+        engagement_type = random.choice(["hooks_only", "service_cta", "urgency_combo"])
+        
+        enhanced_content = content.strip()
+        
+        if engagement_type == "hooks_only":
+            # Add engagement hooks only
+            hook = random.choice(ENGAGEMENT_HOOKS)
+            enhanced_content += f"\n\n{hook}"
+            
+        elif engagement_type == "service_cta":
+            # Add service-oriented CTA
+            hook = random.choice(ENGAGEMENT_HOOKS)
+            service_cta = random.choice(SERVICE_ORIENTED_CTAS)
+            enhanced_content += f"\n\n{hook}\n{service_cta}"
+            
+        elif engagement_type == "urgency_combo":
+            # Add engagement hook + service CTA + urgency creator
+            hook = random.choice(ENGAGEMENT_HOOKS)
+            service_cta = random.choice(SERVICE_ORIENTED_CTAS)
+            urgency = random.choice(URGENCY_CREATORS)
+            enhanced_content += f"\n\n{hook}\n{service_cta}\n\n{urgency}"
+        
+        # Add a professional connection request (30% chance)
+        if random.random() < 0.3:
+            connection_requests = [
+                "\n\n🤝 Found this valuable? Connect with me for more DevOps insights!",
+                "\n\n🌟 Follow for daily DevOps tips and industry updates!",
+                "\n\n🚀 Connect with me to stay updated on the latest tech trends!",
+                "\n\n💼 Building your professional network? Let's connect!",
+                "\n\n⚡ Want more content like this? Hit that follow button!"
+            ]
+            enhanced_content += random.choice(connection_requests)
+        
+        # Add trending hashtags for better reach (always include)
+        trending_hashtags = [
+            "#DevOps", "#CloudNative", "#TechTrends", "#Innovation", "#TechLeadership",
+            "#Engineering", "#SoftwareDevelopment", "#Automation", "#DigitalTransformation",
+            "#Kubernetes", "#Cloud", "#CICD", "#Infrastructure", "#Microservices", 
+            "#DevSecOps", "#SRE", "#Technology", "#CloudComputing", "#ArtificialIntelligence",
+            "#MachineLearning", "#DataScience", "#Cybersecurity", "#OpenSource"
+        ]
+        
+        # Select 8-12 hashtags for maximum reach
+        selected_hashtags = random.sample(trending_hashtags, random.randint(8, 12))
+        hashtag_string = " ".join(selected_hashtags)
+        
+        # Add topic-specific hashtag
+        topic_words = re.findall(r'\b\w+\b', topic)
+        if topic_words:
+            topic_hashtag = "#" + "".join(word.capitalize() for word in topic_words[:3])
+            hashtag_string = f"{topic_hashtag} {hashtag_string}"
+        
+        enhanced_content += f"\n\n{hashtag_string}"
+        
+        return enhanced_content
+    
     def generate_and_verify_post(self, topic: str, max_attempts: int = 5) -> Dict[str, str]:
         """
         Generate a post and have Gemini verify its quality before finalizing.
@@ -313,18 +456,21 @@ class GeminiContentGenerator:
             # Generate content
             content = self._generate_single_content(topic)
             
+            # Enhance with engagement boosters
+            enhanced_content = self._enhance_content_with_engagement_boosters(content, topic)
+            
             # Check if content is similar to previous posts
-            if self.history_manager.is_similar_to_previous(content):
+            if self.history_manager.is_similar_to_previous(enhanced_content):
                 logger.info(f"Generated content too similar to previous post, trying again...")
                 continue
             
             # Self-review the post quality with Gemini
-            review_result = self._review_post_quality(topic, content)
+            review_result = self._review_post_quality(topic, enhanced_content)
             if review_result["is_good_quality"]:
                 logger.info(f"Post passed quality review: {review_result['explanation']}")
                 return {
                     "title": topic,
-                    "content": content,
+                    "content": enhanced_content,
                     "review": review_result['explanation']
                 }
             else:
@@ -333,11 +479,12 @@ class GeminiContentGenerator:
         # If we couldn't generate good quality content after max_attempts, create one with higher randomization
         logger.warning(f"Could not generate good quality content after {max_attempts} attempts, using higher randomization")
         content = self._generate_single_content(topic, temperature=1.0)
-        review_result = self._review_post_quality(topic, content)
+        enhanced_content = self._enhance_content_with_engagement_boosters(content, topic)
+        review_result = self._review_post_quality(topic, enhanced_content)
         
         return {
             "title": topic,
-            "content": content,
+            "content": enhanced_content,
             "review": review_result.get('explanation', 'No review available for final attempt')
         }
     
@@ -355,8 +502,8 @@ class GeminiContentGenerator:
         url = f"{self.api_url}?key={self.api_key}"
         
         review_prompt = f"""
-        You are a critical content reviewer for DevOps and tech-related LinkedIn posts.
-        You have very high standards for content quality, originality, and professionalism.
+        You are a critical content reviewer for DevOps and tech-related LinkedIn posts with a focus on engagement and lead generation.
+        You have very high standards for content quality, originality, professionalism, and engagement potential.
         
         Review the following LinkedIn post about "{topic}" and determine if it meets these standards:
         
@@ -368,13 +515,15 @@ class GeminiContentGenerator:
         6. Does it avoid repeating the same phrase multiple times?
         7. Does it have a natural flow with varied sentence structures?
         8. Does it include specific examples, tools, or practices?
+        9. Does it have good engagement elements that would encourage interaction?
+        10. Are the CTAs natural and not overly salesy?
         
         POST CONTENT TO REVIEW:
         ----------------------
         {content}
         ----------------------
         
-        First, provide a yes/no determination if this post meets professional quality standards.
+        First, provide a yes/no determination if this post meets professional quality standards and has good engagement potential.
         Then, explain your reasoning in 2-3 sentences.
         
         Format your response exactly like this:
@@ -428,46 +577,6 @@ class GeminiContentGenerator:
             # Default to accepting the post if an exception occurs
             return {"is_good_quality": True, "explanation": f"Review error: {str(e)}"}
     
-    def generate_post_content(self, topic: str, max_attempts: int = 3) -> Dict[str, str]:
-        """
-        Generate unique post content that isn't too similar to previous posts.
-        
-        Args:
-            topic: The topic to generate content about
-            max_attempts: Maximum number of generation attempts
-            
-        Returns:
-            Dictionary with title and content
-            
-        Raises:
-            Exception: If unable to generate unique content after max_attempts
-        """
-        logger.info(f"Generating content about: {topic}")
-        
-        for attempt in range(max_attempts):
-            logger.info(f"Generation attempt {attempt + 1}/{max_attempts}")
-            
-            # Generate content
-            content = self._generate_single_content(topic)
-            
-            # Check if content is similar to previous posts
-            if not self.history_manager.is_similar_to_previous(content):
-                return {
-                    "title": topic,
-                    "content": content
-                }
-            
-            logger.info(f"Generated content too similar to previous post, trying again...")
-        
-        # If we couldn't generate unique content after max_attempts, create a more random one
-        logger.warning(f"Could not generate unique content after {max_attempts} attempts, using higher randomization")
-        content = self._generate_single_content(topic, temperature=1.0)
-        
-        return {
-            "title": topic,
-            "content": content
-        }
-    
     def _generate_single_content(self, topic: str, temperature: float = 0.9) -> str:
         """
         Generate a single post content using Gemini API.
@@ -498,11 +607,14 @@ class GeminiContentGenerator:
         IMPORTANT QUALITY GUIDELINES:
         1. Be specific and technical - mention specific tools, techniques or metrics
         2. Avoid repetitive phrasing - never repeat the title phrase multiple times
-        3. Write in a natural human voice that sounds authentic
+        3. Write in a natural human voice that sounds authentic and authoritative
         4. Include concrete examples and practical insights
         5. Avoid generic statements or empty platitudes
         6. Use varied sentence structures and natural transitions
         7. Ensure every point provides real value to DevOps professionals
+        8. Make it engaging and encourage discussion
+        9. Include strategic CTAs that feel natural, not pushy
+        10. Focus on building trust and demonstrating expertise
 
         Random seed: {random_seed}
         Timestamp: {timestamp}
@@ -522,7 +634,7 @@ class GeminiContentGenerator:
                 "temperature": temperature,
                 "topK": 40,
                 "topP": 0.95,
-                "maxOutputTokens": 800
+                "maxOutputTokens": 1000
             }
         }
         
@@ -540,8 +652,8 @@ class GeminiContentGenerator:
             generated_text = response_data["candidates"][0]["content"]["parts"][0]["text"]
             
             # Ensure content isn't too long for LinkedIn
-            if len(generated_text) > 3000:
-                generated_text = generated_text[:2900] + "...\n\nWhat's your experience with this? Share in the comments! #DevOps #TechTrends"
+            if len(generated_text) > 2800:
+                generated_text = generated_text[:2700] + "...\n\nWhat's your take on this? Share your thoughts below!"
             
             logger.info(f"Successfully generated content ({len(generated_text)} chars)")
             return generated_text
@@ -563,54 +675,50 @@ class GeminiContentGenerator:
         """
         # Random facts/points about DevOps and tech topics
         random_points = [
-            f"{topic} has seen a dramatic evolution in recent years",
-            f"Most organizations struggle with implementing this technology effectively",
-            f"The ROI of proper implementation can exceed 300%",
-            f"Industry leaders report 60% faster time-to-market",
-            f"Common misconceptions lead to implementation failures",
-            f"Best practices include automated testing and continuous feedback",
-            f"Future trends will likely include more AI integration",
-            f"Security considerations are often overlooked",
-            f"Proper monitoring is essential for successful projects",
-            f"Team structure greatly impacts effectiveness",
-            f"Training and culture are as important as tools",
-            f"Cost optimization is a key benefit of mature implementations",
-            f"Open source tools have revolutionized this space",
-            f"Enterprise adoption has increased 85% in the past year",
-            f"Hybrid approaches often yield the best results",
-            f"The biggest challenge is often organizational, not technical",
-            f"Success requires executive sponsorship and cultural alignment",
-            f"Small wins can build momentum for larger transformations",
-            f"Metrics and measurement are critical for success",
-            f"The talent gap continues to challenge organizations"
+            f"🚀 {topic} has seen dramatic evolution in recent years",
+            f"📊 Most organizations struggle with implementing this effectively",
+            f"💰 Proper implementation can deliver 300%+ ROI",
+            f"⚡ Industry leaders report 60% faster time-to-market",
+            f"🎯 Common misconceptions lead to implementation failures",
+            f"🔧 Best practices include automated testing and continuous feedback",
+            f"🔮 AI integration will reshape this space significantly",
+            f"🔒 Security considerations are often overlooked initially",
+            f"📈 Proper monitoring is essential for production success",
+            f"👥 Team structure impacts effectiveness more than tools",
+            f"🎓 Training and culture are as important as technology",
+            f"💡 Cost optimization becomes critical at scale",
+            f"🌟 Open source tools have democratized access",
+            f"📈 Enterprise adoption has increased 85% this year",
+            f"⚖️ Hybrid approaches often yield the best results",
+            f"🧠 The biggest challenges are organizational, not technical",
+            f"🎯 Success requires executive buy-in and cultural shift",
+            f"🏆 Small wins build momentum for larger transformations",
+            f"📊 Metrics and measurement drive continuous improvement",
+            f"🔍 The talent gap remains a significant challenge"
         ]
         
         # Create a unique combination of points
         random.shuffle(random_points)
         selected_points = random_points[:random.randint(6, 8)]
         
-        # Generate random hashtags
-        hashtags = [
-            "#DevOps", "#CloudNative", "#TechTrends", "#Innovation", 
-            "#Engineering", "#SoftwareDevelopment", "#Automation",
-            "#Kubernetes", "#Cloud", "#CI/CD", "#Infrastructure", 
-            "#Microservices", "#DevSecOps", "#SRE", "#Technology"
+        engagement_elements = [
+            "💬 What's been your experience with this technology?",
+            "🤔 Which challenges resonate most with your team?",
+            "🎯 What would you add to this list?",
+            "⚡ Ready to accelerate your implementation?"
         ]
-        random.shuffle(hashtags)
-        selected_hashtags = hashtags[:5]
-        hashtag_str = " ".join(selected_hashtags)
         
-        # Create a topic-specific hashtag
-        topic_hashtag = "#" + "".join(word.capitalize() for word in topic.split())
+        service_cta = random.choice(SERVICE_ORIENTED_CTAS)
+        engagement = random.choice(engagement_elements)
         
-        return (
-            f"🚀 Thoughts on {topic} 🚀\n\n"
-            f"I've been thinking about this topic lately and wanted to share some insights:\n\n"
-            + "\n".join(f"• {point}" for point in selected_points) + 
-            f"\n\nWhat has been your experience with this technology? What challenges have you faced?\n\n"
-            f"I'd love to hear your thoughts in the comments below!\n\n"
-            f"{hashtag_str} {topic_hashtag}"
+        content = (
+            f"🚀 Key insights about {topic} 🚀\n\n"
+            f"Been diving deep into this lately and wanted to share some observations:\n\n"
+            + "\n".join(selected_points) + 
+            f"\n\n{engagement}\n{service_cta}"
         )
+        
+        return content
 
 
 class LinkedInHelper:
@@ -841,13 +949,13 @@ def main() -> None:
         # Debug output mode (if environment variable is set)
         if os.environ.get("DEBUG_MODE") == "true":
             logger.info("DEBUG MODE: Printing post without publishing")
-            print("\n" + "="*50)
+            print("\n" + "="*60)
             print(f"Topic: {post['title']}")
-            print("-"*50)
+            print("-"*60)
             print(post['content'])
-            print("\n" + "="*50)
+            print("\n" + "="*60)
             print(f"Quality Review: {post.get('review', 'No review available')}")
-            print("="*50 + "\n")
+            print("="*60 + "\n")
             return
         
         # Initialize LinkedIn helper
@@ -884,7 +992,7 @@ def main() -> None:
                 f.write(f"post_status=success\n")
                 f.write(f"post_quality={post.get('review', 'No review available')}\n")
         
-        logger.info("LinkedIn post automation completed successfully.")
+        logger.info("LinkedIn post automation completed successfully with enhanced engagement features.")
     
     except Exception as e:
         logger.error(f"Error during LinkedIn post automation: {e}")
