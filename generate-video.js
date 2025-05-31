@@ -5,6 +5,7 @@ const axios = require('axios');
 const { google } = require('googleapis');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffmpeg = require('fluent-ffmpeg');
+const path = require('path');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -43,7 +44,12 @@ const config = {
   // AI and verification settings
   useAIGeneration: true,
   verificationThreshold: 2, // How many verifications must match
-  useEnhancedVideo: true, // Use enhanced video creation
+  
+  // TEMPORARY: Disable enhanced video until frame-based issues are resolved
+  useEnhancedVideo: false, // Set to true once frame-based-solution.js is working
+  
+  // Debug settings
+  debugMode: true, // Extra logging for troubleshooting
 };
 
 // ----- ENHANCED AI FACT GENERATION -----
@@ -858,89 +864,175 @@ async function createEnhancedFactVideo(facts, category) {
   
   try {
     if (config.useEnhancedVideo) {
-      console.log("Using enhanced frame-based video generation...");
+      console.log("🎬 Attempting enhanced frame-based video generation...");
       
-      // Use the enhanced frame-based approach
-      const result = await frameBasedSolution.createFrameBasedVideo(
-        facts,
-        category,
-        outputPath
-      );
-      
-      console.log(`Enhanced video created successfully!`);
-      console.log(`Video: ${result.videoPath}`);
-      
-      return {
-        videoPath: result.videoPath,
-        title: result.title || `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`,
-        description: result.description || generateBasicDescription(facts, category),
-        tags: result.tags || ['facts', category, 'amazing', 'educational']
-      };
-    } else {
-      // Use original simple method
-      return await createBasicVideo(outputPath, `${facts.length} ${category} Facts`, facts);
+      // Test if frame-based solution is working before using it
+      try {
+        // Quick test to see if frame-based-solution module is functional
+        if (!frameBasedSolution || typeof frameBasedSolution.createFrameBasedVideo !== 'function') {
+          throw new Error("Frame-based solution module not properly loaded");
+        }
+        
+        // Use the enhanced frame-based approach
+        const result = await frameBasedSolution.createFrameBasedVideo(
+          facts,
+          category,
+          outputPath
+        );
+        
+        console.log(`✅ Enhanced video creation completed`);
+        console.log(`   Video: ${result.videoPath}`);
+        
+        // Validate the created video file
+        const videoExists = await fs.pathExists(result.videoPath);
+        if (!videoExists) {
+          throw new Error("Enhanced video file was not created");
+        }
+        
+        const videoStats = await fs.stat(result.videoPath);
+        console.log(`   Size: ${(videoStats.size / 1024).toFixed(2)}KB`);
+        
+        if (videoStats.size < 500000) { // Less than 500KB
+          console.error(`🚨 Enhanced video too small (${videoStats.size} bytes), falling back to basic video`);
+          throw new Error("Enhanced video creation produced invalid file");
+        }
+        
+        return {
+          videoPath: result.videoPath,
+          title: result.title || `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`,
+          description: result.description || generateBasicDescription(facts, category),
+          tags: result.tags || ['facts', category, 'amazing', 'educational']
+        };
+        
+      } catch (enhancedError) {
+        console.error("🚨 Enhanced video creation failed:", enhancedError.message);
+        console.log("🔄 Falling back to basic video creation...");
+        
+        // Auto-disable enhanced video for this run to prevent repeated failures
+        config.useEnhancedVideo = false;
+      }
     }
     
-  } catch (error) {
-    console.error("Enhanced video creation failed:", error.message);
+    // Use basic video creation (either by choice or as fallback)
+    console.log("🎬 Using reliable basic video creation method...");
+    const basicResult = await createBasicVideo(outputPath, `${facts.length} Amazing ${category.charAt(0).toUpperCase() + category.slice(1)} Facts`, facts);
     
-    // Fallback to basic video
-    console.log("Falling back to basic video creation...");
-    return await createBasicVideo(outputPath, `${facts.length} ${category} Facts`, facts);
-  }
+    // Validate basic video too
+    const basicVideoExists = await fs.pathExists(basicResult.videoPath);
+    if (!basicVideoExists) {
+      throw new Error("Basic video file was not created");
+    }
+    
+    const basicVideoStats = await fs.stat(basicResult.videoPath);
+    console.log(`✅ Basic video created: ${(basicVideoStats.size / 1024).toFixed(2)}KB`);
+    
+    if (basicVideoStats.size < 500000) { // Even basic video should be >500KB for 30 seconds
+      throw new Error(`Basic video too small: ${basicVideoStats.size} bytes`);
+    }
+    
+    return basicResult;
 }
 
 /**
- * Creates a basic video with white background and black text (Original method)
+ * Creates a basic video with white background and black text (Enhanced version)
  */
 async function createBasicVideo(outputPath, title, facts = []) {
-  console.log('Creating basic video:', title);
+  console.log('🎥 Creating enhanced basic video:', title);
   
   try {
-    // Create a text file with the facts for documentation
+    // Validate input facts
+    if (!facts || facts.length === 0) {
+      throw new Error("Cannot create video with no facts");
+    }
+    
+    // Create comprehensive text content
     const factsText = facts.map((fact, index) => {
       const factText = typeof fact === 'object' ? 
-        (fact.enhanced ? fact.enhanced.fact : fact.text) : 
+        (fact.enhanced?.fact || fact.text || 'Unknown fact') : 
         fact;
       return `Fact ${index+1}: ${factText}`;
     }).join('\n\n');
     
-    const textFile = `${config.outputPath}facts_content.txt`;
-    await fs.writeFile(textFile, `${title}\n\n${factsText}`);
+    const fullContent = `${title}\n\n${factsText}\n\nThanks for watching!\nSubscribe for more amazing facts!`;
     
-    // Create the most basic video possible - white background only
+    // Save content file for reference
+    const textFile = `${config.outputPath}video_content_${Date.now()}.txt`;
+    await fs.writeFile(textFile, fullContent);
+    console.log(`📄 Content saved to: ${textFile}`);
+    
+    // Create a proper-length video (30 seconds minimum)
+    console.log("🎬 Creating 30-second basic video with FFmpeg...");
+    
     await new Promise((resolve, reject) => {
-      ffmpeg()
-        .input('color=c=white:s=1280x720:d=30')
+      const ffmpegCommand = ffmpeg()
+        .input('color=c=darkblue:s=1280x720:d=30') // 30 second dark blue background
         .inputFormat('lavfi')
-        .outputOptions(['-c:v libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p'])
+        .outputOptions([
+          '-c:v libx264',      // H.264 codec
+          '-preset medium',    // Better quality than ultrafast
+          '-pix_fmt yuv420p',  // Standard pixel format
+          '-crf 23',           // Good quality
+          '-r 30'              // 30 FPS
+        ])
         .output(outputPath)
         .on('start', (commandLine) => {
-          console.log('FFmpeg command:', commandLine);
+          console.log('📹 FFmpeg command:', commandLine);
         })
         .on('progress', (progress) => {
-          console.log('Processing: ' + progress.percent + '% done');
+          if (progress.percent) {
+            console.log(`   Progress: ${Math.round(progress.percent)}%`);
+          }
         })
         .on('end', () => {
-          console.log('Video processing finished successfully');
+          console.log('✅ Basic video processing completed');
           resolve();
         })
         .on('error', (err) => {
-          console.error('Error:', err);
+          console.error('❌ FFmpeg error:', err.message);
           reject(err);
-        })
-        .run();
+        });
+        
+      ffmpegCommand.run();
     });
     
-    console.log(`Basic video created: ${outputPath}`);
+    // Validate created video
+    const videoExists = await fs.pathExists(outputPath);
+    if (!videoExists) {
+      throw new Error("Basic video file was not created by FFmpeg");
+    }
+    
+    const videoStats = await fs.stat(outputPath);
+    console.log(`✅ Basic video created successfully:`);
+    console.log(`   File: ${outputPath}`);
+    console.log(`   Size: ${(videoStats.size / 1024 / 1024).toFixed(2)}MB (${videoStats.size} bytes)`);
+    
+    // Minimum size check for basic video (should be at least 500KB for 30 seconds)
+    if (videoStats.size < 500000) {
+      throw new Error(`Basic video file too small: ${videoStats.size} bytes`);
+    }
+    
     return {
       videoPath: outputPath,
       title: title,
-      description: generateBasicDescription(facts, title.includes('history') ? 'history' : 'general'),
-      tags: ['facts', 'educational', 'amazing']
+      description: generateBasicDescription(facts, title.toLowerCase().includes('history') ? 'history' : 'general'),
+      tags: ['facts', 'educational', 'amazing', 'learning']
     };
+    
   } catch (error) {
-    console.error('Failed to create basic video:', error);
+    console.error('❌ Basic video creation failed:', error.message);
+    
+    // Last resort: Create minimal video file info for debugging
+    const debugInfo = {
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      factsCount: facts.length,
+      outputPath: outputPath
+    };
+    
+    const debugFile = `${config.outputPath}basic_video_debug_${Date.now()}.json`;
+    await fs.writeJson(debugFile, debugInfo, { spaces: 2 });
+    console.log(`🔍 Debug info saved to: ${debugFile}`);
+    
     throw error;
   }
 }
@@ -1079,14 +1171,40 @@ async function uploadEnhancedVideoToYouTube(videoResult) {
       return `ERROR_FILE_NOT_FOUND_${Date.now()}`;
     }
     
-    // Check file size (should be reasonable for a facts video)
+    // Check file size and video properties
     const stats = await fs.stat(videoResult.videoPath);
-    if (stats.size < 100000) { // Less than 100KB is suspicious
-      console.error(`Video file too small: ${stats.size} bytes`);
-      return `ERROR_FILE_TOO_SMALL_${Date.now()}`;
+    console.log(`📊 Video file size: ${(stats.size / 1024).toFixed(2)}KB (${stats.size} bytes)`);
+    
+    // More reasonable file size check (should be at least 500KB for a 30-second video)
+    if (stats.size < 500000) { // 500KB minimum
+      console.error(`🚨 Video file too small: ${stats.size} bytes (${(stats.size / 1024).toFixed(2)}KB)`);
+      console.error("This suggests video creation failed - investigating...");
+      
+      // Try to get video info using ffprobe
+      try {
+        const { execSync } = require('child_process');
+        const videoInfo = execSync(`ffprobe -v quiet -print_format json -show_format -show_streams "${videoResult.videoPath}"`);
+        const info = JSON.parse(videoInfo.toString());
+        
+        console.log("📹 Video analysis:");
+        console.log(`   Duration: ${info.format?.duration || 'unknown'} seconds`);
+        console.log(`   Video streams: ${info.streams?.filter(s => s.codec_type === 'video').length || 0}`);
+        console.log(`   Audio streams: ${info.streams?.filter(s => s.codec_type === 'audio').length || 0}`);
+        
+        if (parseFloat(info.format?.duration || 0) < 10) {
+          console.error("🚨 Video is too short! Minimum 10 seconds required.");
+          return `ERROR_VIDEO_TOO_SHORT_${Date.now()}`;
+        }
+        
+      } catch (probeError) {
+        console.error("❌ Could not analyze video file:", probeError.message);
+      }
+      
+      console.error("🚨 Video creation likely failed. Check frame-based-solution.js");
+      return `ERROR_FILE_TOO_SMALL_${stats.size}_${Date.now()}`;
     }
     
-    console.log(`✅ File validation passed: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`✅ File size validation passed: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
     
     // Enhanced upload with better categorization
     const uploadData = {
@@ -1178,7 +1296,31 @@ async function main() {
     console.log("⏰ Current time:", new Date().toISOString());
     
     // Verify configuration
-    console.log("🔧 Checking configuration...");
+    console.log("🔧 System diagnostics:");
+    console.log(`   Node.js version: ${process.version}`);
+    console.log(`   Platform: ${process.platform}`);
+    console.log(`   FFmpeg available: ${!!ffmpegPath}`);
+    
+    // Test basic FFmpeg functionality
+    try {
+      const { execSync } = require('child_process');
+      const ffmpegVersion = execSync('ffmpeg -version', { encoding: 'utf8' });
+      console.log(`   FFmpeg version: ${ffmpegVersion.split('\n')[0]}`);
+    } catch (ffmpegError) {
+      console.log(`   ❌ FFmpeg test failed: ${ffmpegError.message}`);
+    }
+    
+    // Test ImageMagick if needed for enhanced videos
+    if (config.useEnhancedVideo) {
+      try {
+        const { execSync } = require('child_process');
+        const convertVersion = execSync('convert -version', { encoding: 'utf8' });
+        console.log(`   ImageMagick: ${convertVersion.split('\n')[0]}`);
+      } catch (magickError) {
+        console.log(`   ⚠️ ImageMagick not available: ${magickError.message}`);
+        console.log(`   This may cause enhanced video creation to fail.`);
+      }
+    }
     const configChecks = {
       'Gemini API Key': !!config.geminiApiKey,
       'YouTube Client ID': !!config.youtubeClientId,
@@ -1326,15 +1468,57 @@ async function main() {
       console.error("🚨 VIDEO CREATION FAILED:", videoError.message);
       console.error("This run will be aborted to prevent uploading bad content.");
       
-      // Save error log
+      // Enhanced debugging information
+      console.log("🔍 DEBUGGING VIDEO CREATION FAILURE:");
+      console.log(`   Facts provided: ${facts.length}`);
+      console.log(`   Category: ${category}`);
+      console.log(`   Enhanced video enabled: ${config.useEnhancedVideo}`);
+      console.log(`   Expected output: ${config.outputPath}`);
+      
+      // Check if output directory exists and is writable
+      try {
+        await fs.ensureDir(config.outputPath);
+        await fs.access(config.outputPath, fs.constants.W_OK);
+        console.log(`   ✅ Output directory accessible`);
+      } catch (dirError) {
+        console.log(`   ❌ Output directory issue: ${dirError.message}`);
+      }
+      
+      // Check for partial files
+      try {
+        const outputFiles = await fs.readdir(config.outputPath);
+        console.log(`   Files in output dir: ${outputFiles.length}`);
+        const videoFiles = outputFiles.filter(f => f.endsWith('.mp4'));
+        console.log(`   Video files found: ${videoFiles.length}`);
+        if (videoFiles.length > 0) {
+          for (const file of videoFiles) {
+            const filePath = path.join(config.outputPath, file);
+            const fileStats = await fs.stat(filePath);
+            console.log(`     ${file}: ${(fileStats.size / 1024).toFixed(2)}KB`);
+          }
+        }
+      } catch (listError) {
+        console.log(`   ❌ Could not list output files: ${listError.message}`);
+      }
+      
+      // Save detailed error log
       const errorLog = {
         timestamp: new Date().toISOString(),
         category,
         error: videoError.message,
         factsAttempted: facts.length,
+        factsPreview: facts.map(f => ({
+          text: (f.text || f.enhanced?.fact || f).substring(0, 100) + '...',
+          hasEnhanced: !!f.enhanced
+        })),
+        config: {
+          useEnhancedVideo: config.useEnhancedVideo,
+          useAIGeneration: config.useAIGeneration,
+          outputPath: config.outputPath
+        },
         status: 'video_creation_failed'
       };
-      await fs.writeJson(`${config.outputPath}error_log_${Date.now()}.json`, errorLog, { spaces: 2 });
+      await fs.writeJson(`${config.outputPath}detailed_error_log_${Date.now()}.json`, errorLog, { spaces: 2 });
       
       throw new Error(`Video creation failed: ${videoError.message}`);
     }
