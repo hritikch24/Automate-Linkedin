@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-05-20T19:37:35.431Z",
+  "lastUpdated": "2025-05-31T09:26:12.826Z",
   "categories": {
     "history": [
       {
@@ -1212,6 +1212,10 @@
         "used": true,
         "usedDate": "2025-05-29T17:11:12.584Z"
       }
-    ]
+    ],
+    "technology": [],
+    "psychology": [],
+    "biology": [],
+    "physics": []
   }
 }
