@@ -409,8 +409,11 @@ async function generateAndVerifyFacts() {
 
 /**
  * Enhanced fallback facts with better structure (Complete original database)
+ * GUARANTEED to return exactly the requested number of facts
  */
 function getEnhancedFallbackFacts(category, count) {
+  console.log(`Getting ${count} enhanced fallback facts for ${category}...`);
+  
   const enhancedFactsByCategory = {
     "history": [
       {
@@ -786,14 +789,34 @@ function getEnhancedFallbackFacts(category, count) {
     ]
   };
   
-  // If category doesn't exist in our predefined facts, use general facts
-  if (!enhancedFactsByCategory[category]) {
+  // Get facts for the requested category
+  let selectedFacts = enhancedFactsByCategory[category] || [];
+  
+  // If category doesn't exist or has insufficient facts, combine from all categories
+  if (selectedFacts.length < count) {
+    console.log(`Category ${category} has only ${selectedFacts.length} facts, need ${count}. Combining categories...`);
     const allFacts = Object.values(enhancedFactsByCategory).flat();
-    return allFacts.sort(() => 0.5 - Math.random()).slice(0, count);
+    selectedFacts = allFacts;
   }
   
-  // Return random facts from the selected category
-  return enhancedFactsByCategory[category].sort(() => 0.5 - Math.random()).slice(0, count);
+  // Ensure we have enough facts by repeating if necessary
+  while (selectedFacts.length < count) {
+    console.log(`Still need more facts (have ${selectedFacts.length}, need ${count}). Repeating fact set...`);
+    selectedFacts = [...selectedFacts, ...Object.values(enhancedFactsByCategory).flat()];
+  }
+  
+  // Shuffle and return exactly the requested count
+  const shuffled = selectedFacts.sort(() => 0.5 - Math.random());
+  const result = shuffled.slice(0, count);
+  
+  console.log(`✅ Returning exactly ${result.length} fallback facts for ${category}`);
+  
+  // Final validation - this should NEVER fail
+  if (result.length !== count) {
+    throw new Error(`CRITICAL: Fallback facts returned ${result.length} instead of ${count}!`);
+  }
+  
+  return result;
 }
 
 // ----- VIDEO CREATION (Enhanced + Original) -----
@@ -802,11 +825,33 @@ function getEnhancedFallbackFacts(category, count) {
  * Creates an enhanced video with AI content, visuals, and audio
  */
 async function createEnhancedFactVideo(facts, category) {
+  // CRITICAL VALIDATION: Ensure we have exactly the right number of facts
+  if (!facts || !Array.isArray(facts) || facts.length !== config.factsPerVideo) {
+    console.error(`🚨 VIDEO CREATION FAILED: Expected ${config.factsPerVideo} facts, got ${facts?.length || 0}`);
+    console.error("Facts received:", facts);
+    throw new Error(`Cannot create video with ${facts?.length || 0} facts. Need exactly ${config.factsPerVideo}.`);
+  }
+  
+  // Validate each fact
+  for (let i = 0; i < facts.length; i++) {
+    const fact = facts[i];
+    const factText = typeof fact === 'object' ? (fact.text || fact.enhanced?.fact) : fact;
+    
+    if (!factText || factText.trim().length < 10) {
+      console.error(`🚨 Fact ${i + 1} validation failed:`, fact);
+      throw new Error(`Fact ${i + 1} is invalid or too short.`);
+    }
+  }
+  
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const outputFileName = `${category}_enhanced_${timestamp}.mp4`;
   const outputPath = `${config.outputPath}${outputFileName}`;
   
-  console.log(`Creating enhanced video for ${category} with ${facts.length} facts...`);
+  console.log(`✅ Creating enhanced video for ${category} with exactly ${facts.length} validated facts...`);
+  console.log("Facts to be used:", facts.map((f, i) => {
+    const text = typeof f === 'object' ? (f.text || f.enhanced?.fact) : f;
+    return `${i + 1}. ${text.substring(0, 60)}...`;
+  }));
   
   // Ensure output directory exists
   await fs.ensureDir(config.outputPath);
@@ -1003,11 +1048,29 @@ async function authenticateYouTube() {
  * Enhanced YouTube upload with better metadata
  */
 async function uploadEnhancedVideoToYouTube(videoResult) {
+  // CRITICAL VALIDATION: Don't upload videos without proper content
+  if (!videoResult || !videoResult.title) {
+    console.error("🚨 UPLOAD BLOCKED: No video result or title");
+    return `ERROR_NO_VIDEO_RESULT_${Date.now()}`;
+  }
+  
+  // Check if title indicates insufficient facts
+  const titleMatch = videoResult.title.match(/(\d+)\s+.*?facts/i);
+  const factsInTitle = titleMatch ? parseInt(titleMatch[1]) : 0;
+  
+  if (factsInTitle < config.factsPerVideo) {
+    console.error(`🚨 UPLOAD BLOCKED: Title indicates only ${factsInTitle} facts, need ${config.factsPerVideo}`);
+    console.error(`Problematic title: "${videoResult.title}"`);
+    return `ERROR_INSUFFICIENT_FACTS_${factsInTitle}_${Date.now()}`;
+  }
+  
+  console.log(`✅ Upload validation passed: ${factsInTitle} facts detected in title`);
+  
   try {
     const auth = await authenticateYouTube();
     const youtube = google.youtube('v3');
     
-    console.log(`Uploading enhanced video: "${videoResult.title}"`);
+    console.log(`Uploading validated video: "${videoResult.title}"`);
     
     // Check if file exists
     const fileExists = await fs.pathExists(videoResult.videoPath);
@@ -1015,6 +1078,15 @@ async function uploadEnhancedVideoToYouTube(videoResult) {
       console.error(`Video file not found: ${videoResult.videoPath}`);
       return `ERROR_FILE_NOT_FOUND_${Date.now()}`;
     }
+    
+    // Check file size (should be reasonable for a facts video)
+    const stats = await fs.stat(videoResult.videoPath);
+    if (stats.size < 100000) { // Less than 100KB is suspicious
+      console.error(`Video file too small: ${stats.size} bytes`);
+      return `ERROR_FILE_TOO_SMALL_${Date.now()}`;
+    }
+    
+    console.log(`✅ File validation passed: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
     
     // Enhanced upload with better categorization
     const uploadData = {
@@ -1154,25 +1226,32 @@ async function main() {
     
     console.log(`🎯 Selected category: ${category}`);
     
-    // Try to get facts from database first
+    // CRITICAL: Get exactly 5 facts with multiple fallback layers
     let facts = [];
+    console.log(`🎯 Attempting to get exactly ${config.factsPerVideo} facts for ${category}...`);
+    
+    // Method 1: Try database first
     try {
       facts = await getUnusedFacts(category, config.factsPerVideo);
-      if (facts.length > 0) {
-        console.log(`📚 Using ${facts.length} facts from database for ${category}`);
+      if (facts && facts.length >= config.factsPerVideo) {
+        facts = facts.slice(0, config.factsPerVideo); // Ensure exactly 5
+        console.log(`✅ Got ${facts.length} facts from database for ${category}`);
+      } else {
+        console.log(`❌ Database only had ${facts.length} facts, need ${config.factsPerVideo}`);
+        facts = []; // Reset to try next method
       }
     } catch (dbError) {
-      console.log("Database access failed, generating fresh facts");
+      console.log("❌ Database access failed, trying AI generation");
+      facts = [];
     }
     
-    // If no database facts, generate new ones
-    if (facts.length === 0) {
-      console.log("🧠 Generating fresh facts...");
-      
-      if (config.useAIGeneration && config.geminiApiKey) {
-        try {
-          const aiFacts = await generateEnhancedFactsForCategory(category, config.factsPerVideo);
-          facts = aiFacts.map(fact => ({
+    // Method 2: Try AI generation if database insufficient
+    if (facts.length < config.factsPerVideo && config.useAIGeneration && config.geminiApiKey) {
+      console.log("🧠 Generating facts with AI...");
+      try {
+        const aiFacts = await generateEnhancedFactsForCategory(category, config.factsPerVideo * 2); // Generate extra
+        if (aiFacts && aiFacts.length >= config.factsPerVideo) {
+          facts = aiFacts.slice(0, config.factsPerVideo).map(fact => ({
             text: typeof fact === 'object' ? fact.fact : fact,
             enhanced: fact,
             category,
@@ -1181,65 +1260,155 @@ async function main() {
             used: false
           }));
           console.log(`✅ Generated ${facts.length} AI facts for ${category}`);
-        } catch (aiError) {
-          console.error("❌ AI generation failed:", aiError.message);
-          const fallbackFacts = getEnhancedFallbackFacts(category, config.factsPerVideo);
-          facts = fallbackFacts.map(fact => ({
-            text: fact.fact,
-            enhanced: fact,
-            category,
-            verificationScore: 3,
-            dateAdded: new Date().toISOString(),
-            used: false
-          }));
-          console.log(`📚 Using ${facts.length} fallback facts`);
+        } else {
+          console.log(`❌ AI only generated ${aiFacts?.length || 0} facts, need ${config.factsPerVideo}`);
+          facts = [];
         }
-      } else {
-        const fallbackFacts = getEnhancedFallbackFacts(category, config.factsPerVideo);
-        facts = fallbackFacts.map(fact => ({
-          text: fact.fact,
-          enhanced: fact,
-          category,
-          verificationScore: 3,
-          dateAdded: new Date().toISOString(),
-          used: false
-        }));
-        console.log(`📚 Using ${facts.length} predefined facts`);
+      } catch (aiError) {
+        console.error("❌ AI generation failed:", aiError.message);
+        facts = [];
       }
     }
     
-    // Create enhanced video
-    console.log("🎬 Creating enhanced video...");
-    const videoResult = await createEnhancedFactVideo(facts, category);
-    console.log(`✅ Video created: ${videoResult.videoPath}`);
-    
-    // Upload to YouTube
-    console.log("📤 Uploading to YouTube...");
-    const videoId = await uploadEnhancedVideoToYouTube(videoResult);
-    console.log(`🎉 Upload complete! Video ID: ${videoId}`);
-    
-    // Mark facts as used if we have a working database
-    try {
-      await markFactsAsUsed(facts);
-    } catch (markError) {
-      console.log("Could not mark facts as used (database issue)");
+    // Method 3: GUARANTEED fallback facts (this should NEVER fail)
+    if (facts.length < config.factsPerVideo) {
+      console.log("🚨 Using guaranteed fallback facts...");
+      const fallbackFacts = getEnhancedFallbackFacts(category, config.factsPerVideo);
+      
+      if (!fallbackFacts || fallbackFacts.length < config.factsPerVideo) {
+        console.error(`🚨 CRITICAL ERROR: Fallback facts failed! Got ${fallbackFacts?.length || 0}, need ${config.factsPerVideo}`);
+        throw new Error(`Cannot get ${config.factsPerVideo} facts for ${category}. System failure.`);
+      }
+      
+      facts = fallbackFacts.slice(0, config.factsPerVideo).map(fact => ({
+        text: fact.fact || fact,
+        enhanced: fact,
+        category,
+        verificationScore: 3,
+        dateAdded: new Date().toISOString(),
+        used: false
+      }));
+      console.log(`✅ Using ${facts.length} guaranteed fallback facts`);
     }
     
-    // Save execution log
+    // FINAL VALIDATION: Absolutely ensure we have exactly 5 valid facts
+    if (!facts || facts.length !== config.factsPerVideo) {
+      console.error(`🚨 CRITICAL VALIDATION FAILED: Expected ${config.factsPerVideo} facts, got ${facts?.length || 0}`);
+      console.error("Facts array:", facts);
+      throw new Error(`Failed to get exactly ${config.factsPerVideo} facts. Aborting video creation.`);
+    }
+    
+    // Validate each fact has required content
+    for (let i = 0; i < facts.length; i++) {
+      const fact = facts[i];
+      if (!fact.text || fact.text.trim().length < 10) {
+        console.error(`🚨 Fact ${i + 1} is invalid:`, fact);
+        throw new Error(`Fact ${i + 1} is too short or empty. Aborting.`);
+      }
+    }
+    
+    console.log(`🎉 SUCCESS: Have exactly ${facts.length} valid facts for ${category}!`);
+    console.log("Facts preview:", facts.map((f, i) => `${i + 1}. ${f.text.substring(0, 50)}...`));
+    
+    // Create enhanced video with validated facts
+    console.log("🎬 Creating enhanced video with validated facts...");
+    let videoResult;
+    try {
+      videoResult = await createEnhancedFactVideo(facts, category);
+      console.log(`✅ Video created successfully: ${videoResult.videoPath}`);
+      
+      // Additional validation after video creation
+      if (!videoResult.title || videoResult.title.includes('0 ')) {
+        throw new Error("Video creation produced invalid title with 0 facts");
+      }
+      
+    } catch (videoError) {
+      console.error("🚨 VIDEO CREATION FAILED:", videoError.message);
+      console.error("This run will be aborted to prevent uploading bad content.");
+      
+      // Save error log
+      const errorLog = {
+        timestamp: new Date().toISOString(),
+        category,
+        error: videoError.message,
+        factsAttempted: facts.length,
+        status: 'video_creation_failed'
+      };
+      await fs.writeJson(`${config.outputPath}error_log_${Date.now()}.json`, errorLog, { spaces: 2 });
+      
+      throw new Error(`Video creation failed: ${videoError.message}`);
+    }
+    
+    // Upload to YouTube with additional validation
+    console.log("📤 Uploading validated video to YouTube...");
+    let videoId;
+    try {
+      videoId = await uploadEnhancedVideoToYouTube(videoResult);
+      
+      if (videoId.startsWith('ERROR_')) {
+        throw new Error(`Upload failed with error: ${videoId}`);
+      }
+      
+      console.log(`🎉 Upload successful! Video ID: ${videoId}`);
+      
+    } catch (uploadError) {
+      console.error("🚨 UPLOAD FAILED:", uploadError.message);
+      console.error("Video was created but not uploaded due to validation failure.");
+      
+      // Save upload error log
+      const uploadErrorLog = {
+        timestamp: new Date().toISOString(),
+        category,
+        videoPath: videoResult.videoPath,
+        title: videoResult.title,
+        error: uploadError.message,
+        status: 'upload_failed'
+      };
+      await fs.writeJson(`${config.outputPath}upload_error_${Date.now()}.json`, uploadErrorLog, { spaces: 2 });
+      
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    // Mark facts as used if we have a working database AND upload was successful
+    if (videoId && !videoId.startsWith('ERROR_')) {
+      try {
+        await markFactsAsUsed(facts);
+        console.log(`✅ Marked ${facts.length} facts as used in database`);
+      } catch (markError) {
+        console.log("⚠️ Could not mark facts as used (database issue, but upload succeeded)");
+      }
+    } else {
+      console.log("❌ Not marking facts as used since upload failed");
+    }
+    
+    // Final success validation
+    if (!videoId || videoId.startsWith('ERROR_')) {
+      throw new Error(`Process failed with video ID: ${videoId}`);
+    }
+    
+    // Save execution log only if everything succeeded
     const executionLog = {
       timestamp: new Date().toISOString(),
       category,
       videoId,
       title: videoResult.title,
       factsCount: facts.length,
+      videoPath: videoResult.videoPath,
       useEnhanced: config.useEnhancedVideo,
       useAI: config.useAIGeneration,
-      status: videoId.startsWith('ERROR_') ? 'failed' : 'success'
+      status: 'success',
+      validation: {
+        factsValidated: facts.length === config.factsPerVideo,
+        titleValid: !videoResult.title.includes('0 '),
+        uploadSuccessful: !videoId.startsWith('ERROR_')
+      }
     };
     
     await fs.writeJson(`${config.outputPath}execution_log.json`, executionLog, { spaces: 2 });
     
-    console.log("🏁 Complete enhanced automation finished successfully!");
+    console.log("🏆 Complete enhanced automation finished successfully!");
+    console.log(`📊 Final stats: ${facts.length} facts, Video ID: ${videoId}`);
+    console.log(`📺 Watch at: https://www.youtube.com/watch?v=${videoId}`);
     
   } catch (error) {
     console.error("💥 Fatal error in complete automation:", error);
