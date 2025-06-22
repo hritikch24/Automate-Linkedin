@@ -178,7 +178,86 @@ class PostHistoryManager:
             # Use sequence matcher to determine similarity ratio
             similarity = SequenceMatcher(None, normalized_content, normalized_previous).ratio()
             if similarity > threshold:
-                logger.info("LinkedIn validation post automation completed successfully.")
+        def main() -> None:
+    """Main function to run the K8s validation post automation - exact same structure as working code."""
+    try:
+        # Get environment variables - exact same validation as working code
+        access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
+        organization_id = os.environ.get("LINKEDIN_ORGANIZATION_ID")
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        
+        if not access_token or not organization_id or not gemini_api_key:
+            logger.error("Missing required environment variables.")
+            logger.error("Ensure LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, and GEMINI_API_KEY are set.")
+            exit(1)
+        
+        # Make sure organization_id is just the ID number, not the full URN
+        # Strip the "urn:li:organization:" prefix if it's included
+        if organization_id.startswith("urn:li:organization:"):
+            organization_id = organization_id.replace("urn:li:organization:", "")
+        
+        # Initialize post history manager
+        history_manager = PostHistoryManager()
+        
+        # Initialize validation content generator
+        gemini = GeminiValidationGenerator(gemini_api_key, history_manager)
+        
+        # Generate a validation topic
+        topic = gemini.generate_topic()
+        
+        # Generate and verify validation post content
+        post = gemini.generate_and_verify_post(topic)
+        
+        # Log the review result
+        logger.info(f"Post quality review: {post.get('review', 'No review available')}")
+        
+        # Debug output mode (if environment variable is set)
+        if os.environ.get("DEBUG_MODE") == "true":
+            logger.info("DEBUG MODE: Printing post without publishing")
+            print("\n" + "="*60)
+            print(f"Topic: {post['title']}")
+            print("-"*60)
+            print(post['content'])
+            print("\n" + "="*60)
+            print(f"Quality Review: {post.get('review', 'No review available')}")
+            print("="*60 + "\n")
+            return
+        
+        # Initialize LinkedIn helper
+        linkedin = LinkedInHelper(access_token)
+        
+        # Get user profile
+        profile = linkedin.get_user_profile()
+        person_id = profile.get('id')
+        
+        if not person_id:
+            logger.error("Failed to retrieve person ID from profile.")
+            exit(1)
+        
+        # Try to post as the organization
+        try:
+            logger.info("Attempting to post as organization...")
+            linkedin.post_as_organization(person_id, organization_id, post["content"])
+            logger.info("Successfully posted as organization!")
+        except Exception as e:
+            logger.warning(f"Failed to post as organization: {e}")
+            logger.info("Falling back to posting as personal profile...")
+            
+            # If posting as organization fails, fall back to posting as person
+            linkedin.post_as_person(person_id, post["content"])
+            logger.info("Successfully posted as personal profile!")
+        
+        # Log post history
+        history_manager.add_post(post["title"], post["content"])
+        
+        # Output for GitHub Actions
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                f.write(f"post_title={post['title']}\n")
+                f.write(f"post_status=success\n")
+                f.write(f"post_quality={post.get('review', 'No review available')}\n")
+        
+        logger.info("LinkedIn validation post automation completed successfully.")
     
     except Exception as e:
         logger.error(f"Error during LinkedIn post automation: {e}")
