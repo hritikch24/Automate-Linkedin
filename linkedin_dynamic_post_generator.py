@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Kubernetes Platform Feedback Post Generator
-------------------------------------------
-Generates engaging LinkedIn posts to validate product ideas and gather community feedback.
+Kubernetes Platform Feedback Post Generator with LinkedIn Publishing
+------------------------------------------------------------------
+Generates and publishes engaging LinkedIn posts to validate product ideas and gather community feedback.
 Focuses on problem identification and solution validation rather than product promotion.
+
+Required environment variables for LinkedIn posting:
+- LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
+- Optional: LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
 
 Usage:
     python feedback_post_generator.py
@@ -433,66 +437,382 @@ class FeedbackPostGenerator:
             
         return variations
 
-def main():
-    """Main function to generate and display validation posts."""
+class LinkedInHelper:
+    """Helper class for LinkedIn API operations - using exact same structure as working code."""
     
-    # Check for optional API key
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        logger.info("Using AI-enhanced generation with Gemini API")
-    else:
-        logger.info("Using template-based generation (set GEMINI_API_KEY for AI enhancement)")
-    
-    # Initialize generator
-    generator = FeedbackPostGenerator(api_key)
-    
-    # Check for specific problem type
-    problem_type = os.environ.get("PROBLEM_TYPE")
-    
-    # Generate posts
-    if os.environ.get("GENERATE_MULTIPLE") == "true":
-        # Generate multiple variations
-        variations = generator.generate_multiple_variations(problem_type, count=3)
+    def __init__(self, access_token: str):
+        """
+        Initialize the LinkedIn helper.
         
-        for i, post in enumerate(variations, 1):
+        Args:
+            access_token: LinkedIn API access token
+        """
+        self.access_token = access_token
+        self.headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json',
+            'X-Restli-Protocol-Version': '2.0.0'
+        }
+    
+    def get_user_profile(self) -> Dict[str, Any]:
+        """
+        Retrieve the user's LinkedIn profile.
+        
+        Returns:
+            User profile data
+        """
+        logger.info("Retrieving user profile...")
+        url = "https://api.linkedin.com/v2/me"
+        
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to retrieve user profile: {response.status_code}")
+            logger.error(f"Response: {response.text}")
+            raise Exception(f"LinkedIn API error: {response.status_code}")
+        
+        profile_data = response.json()
+        logger.info(f"Successfully retrieved user profile. ID: {profile_data.get('id')}")
+        return profile_data
+    
+    def get_organization_access(self, organization_id: str) -> Dict[str, Any]:
+        """
+        Check if the user has access to the organization.
+        
+        Args:
+            organization_id: LinkedIn organization ID
+            
+        Returns:
+            Organization access data
+        """
+        logger.info(f"Checking organization access for org ID: {organization_id}...")
+        url = f"https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(roleAssignee~(localizedFirstName,localizedLastName),state,role,organization~(localizedName)))"
+        
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to check organization access: {response.status_code}")
+            logger.error(f"Response: {response.text}")
+            raise Exception(f"LinkedIn API error: {response.status_code}")
+        
+        access_data = response.json()
+        logger.info(f"Successfully retrieved organization access data.")
+        return access_data
+    
+    def post_as_person(self, person_id: str, content: str) -> Dict[str, Any]:
+        """
+        Post content as a person.
+        
+        Args:
+            person_id: LinkedIn person ID
+            content: Post content
+            
+        Returns:
+            Response data
+        """
+        logger.info(f"Posting as person {person_id}...")
+        url = "https://api.linkedin.com/v2/ugcPosts"
+        
+        post_data = {
+            "author": f"urn:li:person:{person_id}",
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": content
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+        
+        logger.info(f"Post data: {json.dumps(post_data, indent=2)}")
+        response = requests.post(url, headers=self.headers, json=post_data)
+        
+        if response.status_code not in (200, 201):
+            logger.error(f"Failed to post as person: {response.status_code}")
+            logger.error(f"Response: {response.text}")
+            raise Exception(f"LinkedIn API error: {response.status_code}")
+        
+        response_data = response.json() if response.text else {}
+        logger.info(f"Successfully posted as person.")
+        return response_data
+    
+    def post_as_organization(self, person_id: str, organization_id: str, content: str) -> Dict[str, Any]:
+        """
+        Post content as an organization.
+        
+        Args:
+            person_id: LinkedIn person ID
+            organization_id: LinkedIn organization ID
+            content: Post content
+            
+        Returns:
+            Response data
+        """
+        logger.info(f"Posting as organization {organization_id} with person {person_id}...")
+        url = "https://api.linkedin.com/v2/ugcPosts"
+        
+        # First try the standard format
+        post_data = {
+            "author": f"urn:li:organization:{organization_id}",
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": content
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+        
+        logger.info(f"Post data: {json.dumps(post_data, indent=2)}")
+        
+        # Try several attempts with different headers to see what works
+        logger.info("First attempt: Standard headers...")
+        response = requests.post(url, headers=self.headers, json=post_data)
+        
+        if response.status_code in (200, 201):
+            response_data = response.json() if response.text else {}
+            logger.info(f"Successfully posted as organization on first attempt.")
+            return response_data
+        else:
+            logger.warning(f"First attempt failed: {response.status_code}")
+            logger.warning(f"Response: {response.text}")
+            
+            # Try legacy Shares API
+            logger.info("Second attempt: Using Shares API...")
+            shares_url = "https://api.linkedin.com/v2/shares"
+            shares_data = {
+                "owner": f"urn:li:organization:{organization_id}",
+                "content": {
+                    "contentEntities": [
+                        {
+                            "entityLocation": "https://automatedevops.tech",
+                            "thumbnails": [
+                                {
+                                    "resolvedUrl": "https://automatedevops.tech/logo.jpg"
+                                }
+                            ]
+                        }
+                    ],
+                    "title": "DevOps Insights",
+                    "description": "Latest DevOps trends and best practices"
+                },
+                "text": {
+                    "text": content[:1000]  # Limit text to 1000 chars for Shares API
+                },
+                "distribution": {
+                    "linkedInDistributionTarget": {}
+                }
+            }
+            
+            shares_response = requests.post(shares_url, headers=self.headers, json=shares_data)
+            
+            if shares_response.status_code in (200, 201):
+                shares_data = shares_response.json() if shares_response.text else {}
+                logger.info(f"Successfully posted as organization using Shares API.")
+                return shares_data
+            else:
+                logger.warning(f"Second attempt failed: {shares_response.status_code}")
+                logger.warning(f"Response: {shares_response.text}")
+                
+                # If all attempts failed, raise exception
+                logger.error("All attempts to post as organization failed.")
+                raise Exception("Failed to post as organization after multiple attempts")
+
+def main():
+    """Main function to generate and optionally publish validation posts."""
+    try:
+        # Get environment variables - using exact same variable names as working code
+        access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
+        organization_id = os.environ.get("LINKEDIN_ORGANIZATION_ID")
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        
+        if not access_token:
+            logger.warning("LINKEDIN_ACCESS_TOKEN not set. Will generate post without publishing.")
+        
+        # Make sure organization_id is just the ID number, not the full URN
+        # Strip the "urn:li:organization:" prefix if it's included
+        if organization_id and organization_id.startswith("urn:li:organization:"):
+            organization_id = organization_id.replace("urn:li:organization:", "")
+        
+        # Initialize generator
+        if gemini_api_key:
+            logger.info("Using AI-enhanced generation with Gemini API")
+        else:
+            logger.info("Using template-based generation (set GEMINI_API_KEY for AI enhancement)")
+        
+        generator = FeedbackPostGenerator(gemini_api_key)
+        
+        # Check for specific problem type
+        problem_type = os.environ.get("PROBLEM_TYPE")
+        
+        # Generate posts
+        if os.environ.get("GENERATE_MULTIPLE") == "true":
+            # Generate multiple variations
+            variations = generator.generate_multiple_variations(problem_type, count=3)
+            
             print(f"\n{'='*60}")
-            print(f"VARIATION {i}: {post['title']}")
+            print("GENERATED MULTIPLE VARIATIONS")
+            print('='*60)
+            
+            for i, post in enumerate(variations, 1):
+                print(f"\nVARIATION {i}: {post['title']}")
+                print(f"Problem Type: {post['problem_type']}")
+                print(f"Method: {post.get('generation_method', 'template_based')}")
+                print('-'*40)
+                print(post['content'])
+                print('-'*40)
+            
+            # Ask user which variation to post (if LinkedIn credentials available)
+            if access_token:
+                try:
+                    choice = input(f"\nWhich variation would you like to post to LinkedIn? (1-{len(variations)} or 'none'): ").strip()
+                    if choice.isdigit() and 1 <= int(choice) <= len(variations):
+                        post = variations[int(choice) - 1]
+                        print(f"\nSelected variation {choice} for posting...")
+                    elif choice.lower() != 'none':
+                        print("Invalid choice, skipping LinkedIn posting.")
+                        return
+                    else:
+                        print("Skipping LinkedIn posting.")
+                        return
+                except KeyboardInterrupt:
+                    print("\nSkipping LinkedIn posting.")
+                    return
+            else:
+                print("\nTo post to LinkedIn, set LINKEDIN_ACCESS_TOKEN environment variable.")
+                return
+        else:
+            # Generate single post
+            if gemini_api_key:
+                post = generator.generate_enhanced_post_with_ai(problem_type)
+            else:
+                post = generator.generate_validation_post(problem_type)
+            
+            print(f"\n{'='*60}")
+            print(f"VALIDATION POST: {post['title']}")
             print(f"Problem Type: {post['problem_type']}")
             print(f"Method: {post.get('generation_method', 'template_based')}")
             print('='*60)
             print(post['content'])
             print('='*60)
-    else:
-        # Generate single post
-        if api_key:
-            post = generator.generate_enhanced_post_with_ai(problem_type)
-        else:
-            post = generator.generate_validation_post(problem_type)
         
-        print(f"\n{'='*60}")
-        print(f"VALIDATION POST: {post['title']}")
-        print(f"Problem Type: {post['problem_type']}")
-        print(f"Method: {post.get('generation_method', 'template_based')}")
-        print('='*60)
-        print(post['content'])
-        print('='*60)
+        # Post to LinkedIn if credentials are available - using exact same flow as working code
+        if access_token:
+            # Debug output mode (if environment variable is set)
+            if os.environ.get("DEBUG_MODE") == "true":
+                logger.info("DEBUG MODE: Printing post without publishing")
+                print("\n" + "="*60)
+                print(f"Topic: {post['title']}")
+                print("-"*60)
+                print(post['content'])
+                print("\n" + "="*60)
+                print("DEBUG MODE: Set DEBUG_MODE=false to actually post")
+                print("="*60 + "\n")
+                return
+            
+            # Confirm posting unless AUTO_POST is set
+            if os.environ.get("AUTO_POST") != "true":
+                try:
+                    confirm = input(f"\nPost this to LinkedIn? (y/N): ").strip().lower()
+                    if confirm not in ['y', 'yes']:
+                        print("Posting cancelled.")
+                        return
+                except KeyboardInterrupt:
+                    print("\nPosting cancelled.")
+                    return
+            
+            # Initialize LinkedIn helper - using exact same class name as working code
+            linkedin = LinkedInHelper(access_token)
+            
+            # Get user profile
+            profile = linkedin.get_user_profile()
+            person_id = profile.get('id')
+            
+            if not person_id:
+                logger.error("Failed to retrieve person ID from profile.")
+                return
+            
+            # Try to post as the organization first, then fallback to personal - exact same logic
+            try:
+                logger.info("Attempting to post as organization...")
+                linkedin.post_as_organization(person_id, organization_id, post["content"])
+                logger.info("Successfully posted as organization!")
+                
+                # Output for GitHub Actions
+                if os.environ.get("GITHUB_ACTIONS") == "true":
+                    with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                        f.write(f"post_title={post['title']}\n")
+                        f.write(f"post_status=success\n")
+                        f.write(f"post_method=organization\n")
+                        f.write(f"problem_type={post['problem_type']}\n")
+                
+            except Exception as e:
+                logger.warning(f"Failed to post as organization: {e}")
+                logger.info("Falling back to posting as personal profile...")
+                
+                # If posting as organization fails, fall back to posting as person
+                try:
+                    linkedin.post_as_person(person_id, post["content"])
+                    logger.info("Successfully posted as personal profile!")
+                    
+                    # Output for GitHub Actions
+                    if os.environ.get("GITHUB_ACTIONS") == "true":
+                        with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                            f.write(f"post_title={post['title']}\n")
+                            f.write(f"post_status=success\n")
+                            f.write(f"post_method=personal\n")
+                            f.write(f"problem_type={post['problem_type']}\n")
+                            
+                except Exception as e2:
+                    logger.error(f"Failed to post as personal profile: {e2}")
+                    
+                    # Output for GitHub Actions  
+                    if os.environ.get("GITHUB_ACTIONS") == "true":
+                        with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                            f.write("post_status=failed\n")
+                            f.write(f"error={str(e2)}\n")
+                    return
+        
+        logger.info("LinkedIn post automation completed successfully with validation focus.")
+        
+    except Exception as e:
+        logger.error(f"Error during LinkedIn post automation: {e}")
+        # Output for GitHub Actions
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                f.write("post_status=failed\n")
+                f.write(f"error={str(e)}\n")
     
     # Output usage instructions
     print(f"\n{'='*60}")
-    print("USAGE INSTRUCTIONS:")
-    print("1. Copy the post content above")
-    print("2. Post on LinkedIn, Reddit (r/devops), or tech communities")
-    print("3. Monitor comments for feedback patterns")
-    print("4. Look for:")
+    print("VALIDATION POST USAGE:")
+    print("1. Monitor LinkedIn comments and engagement")
+    print("2. Also post on Reddit (r/devops, r/kubernetes)")
+    print("3. Share in DevOps Discord/Slack communities") 
+    print("4. Look for feedback patterns:")
     print("   - Problem validation (do people relate?)")
     print("   - Solution interest (would they use it?)")
     print("   - Feature priorities (what matters most?)")
     print("   - Current tool frustrations")
     print("   - Willingness to pay indicators")
-    print("\nEnvironment Variables:")
+    print("\nEnvironment Variables (same as working automation):")
+    print("- LINKEDIN_ACCESS_TOKEN: Enable LinkedIn posting")
+    print("- LINKEDIN_ORGANIZATION_ID: Post as company (optional)")
     print("- GEMINI_API_KEY: Enable AI-enhanced generation")
     print("- PROBLEM_TYPE: observability_fragmentation, cost_visibility, troubleshooting_complexity")
     print("- GENERATE_MULTIPLE: true (generate 3 variations)")
+    print("- DEBUG_MODE: true (generate but don't post)")
+    print("- AUTO_POST: true (skip confirmation prompt)")
     print('='*60)
 
 if __name__ == "__main__":
