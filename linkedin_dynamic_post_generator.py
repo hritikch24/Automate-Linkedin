@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
-Kubernetes Platform Feedback Post Generator with LinkedIn Publishing
-------------------------------------------------------------------
-Generates and publishes engaging LinkedIn posts to validate product ideas and gather community feedback.
-Focuses on problem identification and solution validation rather than product promotion.
+LinkedIn K8s Platform Validation Post Generator
+----------------------------------------------
+Generates and publishes validation-focused LinkedIn posts about Kubernetes platform ideas.
+Uses the exact same structure and flow as the working DevOps automation.
 
-Required environment variables for LinkedIn posting:
+Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
-- Optional: LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
-
-Usage:
-    python feedback_post_generator.py
+- LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
+- GEMINI_API_KEY: Your Gemini API key
 """
 
 import os
@@ -32,167 +30,79 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Problem-focused post templates for validation
-VALIDATION_POST_TEMPLATES = [
-    {
-        "hook": "Hey DevOps folks! 👋\n\nI've been thinking about a pain point that keeps coming up in conversations with fellow engineers...",
-        "problem_intro": "**The Problem:** {main_problem} 😤",
-        "pain_points": [
-            "- {tool1} + {tool2} for {function1} 📊",
-            "- {separate_tool} for {function2} 📝", 
-            "- {additional_pain} 💰",
-            "- Context switching kills productivity ⚡",
-            "- {correlation_issue} 🔍"
-        ],
-        "solution_intro": "**What if there was a single dashboard where you could:**",
-        "solution_points": [
-            "✅ {feature1}",
-            "✅ {feature2}", 
-            "✅ {feature3}",
-            "✅ {feature4}",
-            "✅ {feature5}",
-            "✅ {feature6}"
-        ],
-        "scenario_intro": "**Plus imagine this scenario:** 🤖",
-        "engagement_questions": [
-            "🔥 **Are you frustrated with {problem_area}?**",
-            "💡 **Would you find value in a unified platform like this?**",
-            "⚡ **What's your biggest {domain} challenge right now?**",
-            "🎯 **What features would be absolute must-haves?**"
-        ]
-    },
-    {
-        "hook": "DevOps community! Need your honest thoughts... 🤔\n\nBeen chatting with teams about their {domain} setup and hearing similar frustrations:",
-        "problem_intro": "**Current Reality:** {main_problem} 😩",
-        "pain_points": [
-            "→ {pain1} ⚠️",
-            "→ {pain2} 🔄",
-            "→ {pain3} 💸",
-            "→ {pain4} ⏱️",
-            "→ {pain5} 🚨"
-        ],
-        "solution_intro": "**Imagining a world where:**",
-        "solution_points": [
-            "🎯 {benefit1}",
-            "⚡ {benefit2}",
-            "🔍 {benefit3}",
-            "💰 {benefit4}",
-            "🤖 {benefit5}",
-            "📊 {benefit6}"
-        ],
-        "scenario_intro": "**Real-world example:** 💭",
-        "engagement_questions": [
-            "🤷‍♂️ **Does this match your experience?**",
-            "🔧 **How are you solving this today?**",
-            "💯 **What would make the biggest impact for your team?**",
-            "🚀 **Missing any critical capabilities in this vision?**"
-        ]
-    }
+# K8s validation topics - using same structure as your working code
+K8S_VALIDATION_TOPICS = [
+    "K8s Observability Tool Sprawl",
+    "Kubernetes Cost Visibility Challenges", 
+    "K8s Troubleshooting Complexity",
+    "Kubernetes Monitoring Fragmentation",
+    "K8s Cost Optimization Pain Points",
+    "Kubernetes Log Management Issues",
+    "K8s Metrics Correlation Problems",
+    "Kubernetes AI-Powered Debugging",
+    "K8s Resource Right-Sizing Challenges",
+    "Kubernetes Spot Instance Management"
 ]
 
-# K8s-specific problem scenarios
-K8S_PROBLEM_SCENARIOS = {
-    "observability_fragmentation": {
-        "main_problem": "Managing Kubernetes clusters feels fragmented",
-        "tool1": "Grafana + Prometheus",
-        "tool2": "metrics",
-        "function1": "metrics",
-        "separate_tool": "ELK/Loki",
-        "function2": "logs",
-        "additional_pain": "Separate cost management tools",
-        "correlation_issue": "Correlating issues across tools is manual and time-consuming",
-        "problem_area": "tool sprawl in K8s observability",
-        "domain": "K8s monitoring/cost",
-        "features": [
-            "Connect your K8s clusters instantly",
-            "View pod logs with intelligent search & retention",
-            "Monitor deployment/pod metrics in real-time", 
-            "Get AI-powered troubleshooting suggestions",
-            "Optimize costs with automated spot node management",
-            "Receive smart recommendations for resource right-sizing"
-        ],
-        "scenario": [
-            "- Your payment-service pod crashes",
-            "- AI analyzes logs + metrics + events",
-            "- Says: \"Memory limit too low, increase from 512Mi to 1Gi\"",
-            "- One-click fix applied", 
-            "- Problem solved in 30 seconds vs 30 minutes"
-        ]
-    },
-    "cost_visibility": {
-        "main_problem": "K8s cost optimization feels like shooting in the dark",
-        "pain1": "No real-time visibility into pod-level costs",
-        "pain2": "Resource waste is hidden until the bill arrives",
-        "pain3": "Spot instance management is complex and risky",
-        "pain4": "Right-sizing decisions are mostly guesswork",
-        "pain5": "Cost allocation by team/project is nearly impossible",
-        "problem_area": "K8s cost transparency",
-        "domain": "Kubernetes cost management",
-        "benefits": [
-            "See real-time cost breakdown per pod/namespace",
-            "Automated spot node lifecycle with zero downtime",
-            "AI-powered right-sizing recommendations",
-            "Waste detection with one-click optimization",
-            "Cost attribution by team with detailed reports",
-            "Predictive cost forecasting based on usage patterns"
-        ],
-        "scenario": [
-            "- You notice your monthly K8s bill jumped 40%",
-            "- Platform identifies: 15 over-provisioned deployments",
-            "- Shows: $2,847 monthly savings with suggested changes",
-            "- One-click applies optimizations safely",
-            "- Next month: 35% cost reduction achieved"
-        ]
-    },
-    "troubleshooting_complexity": {
-        "main_problem": "Debugging K8s issues feels like detective work",
-        "pain1": "Logs scattered across multiple namespaces and tools", 
-        "pain2": "No context about what changed before the incident",
-        "pain3": "Correlation between metrics and logs is manual",
-        "pain4": "Root cause analysis takes hours or days",
-        "pain5": "Team knowledge trapped in individual heads",
-        "problem_area": "K8s troubleshooting complexity",
-        "domain": "Kubernetes debugging",
-        "benefits": [
-            "AI-powered incident analysis with root cause suggestions",
-            "Unified timeline showing logs + metrics + deployments",
-            "Pattern recognition from historical incidents",
-            "Natural language query interface for cluster data",
-            "Automated runbook suggestions based on symptoms",
-            "Team knowledge base built from resolved issues"
-        ],
-        "scenario": [
-            "- \"Why is checkout service responding slowly?\"",
-            "- AI finds: Database connection pool exhausted",
-            "- Shows: 3 similar incidents last month",
-            "- Suggests: Connection pool tuning + HPA adjustment",
-            "- Provides: Step-by-step remediation guide"
-        ]
-    }
-}
+# Validation post templates - using same meta-prompt structure as your working code
+VALIDATION_META_PROMPTS = [
+    """Generate a unique, engaging LinkedIn post asking for community feedback about {topic}. Focus on identifying pain points and validating problems rather than selling solutions.
 
-# Engagement elements specific to validation posts
-VALIDATION_ENGAGEMENT_ELEMENTS = [
-    "Really appreciate any insights you can share! 🙏",
-    "Genuinely curious about your experiences and whether this resonates! 💭",
-    "Would love to hear your take on this! 🤝",
-    "Your insights would be incredibly valuable! ⭐",
-    "Excited to learn from the community's experience! 🚀"
+    IMPORTANT: Structure it as a genuine question to the DevOps community:
+    - Start with a relatable problem statement
+    - Present a potential solution vision (without claiming you're building it)
+    - Ask specific questions about their current experience
+    - End with engagement hooks asking for their input
+
+    Format with emojis and bullet points. Include hashtags. Make it 15-20 lines long and community-focused.""",
+
+    """Create a validation-focused LinkedIn post about challenges with {topic}. Present yourself as someone exploring this problem space and genuinely seeking community input.
+
+    IMPORTANT: Include elements like:
+    - "Been thinking about this pain point..."
+    - "What if there was a platform that..."
+    - "What's your experience with..."
+    - "Would this solve real problems for your team?"
+
+    Format with emojis and bullet points. Include relevant hashtags. Make it 15-20 lines long and authentic.""",
+
+    """Write a LinkedIn post seeking community feedback on {topic}. Focus on problem validation and feature prioritization rather than product promotion.
+
+    IMPORTANT: Ask specific questions like:
+    - "Are you frustrated with current solutions?"
+    - "What features would be must-haves?"
+    - "How are you solving this today?"
+    - "What would make the biggest impact?"
+
+    Format with emojis and bullet points. Make it 15-20 lines long and genuinely curious."""
 ]
 
-COMMUNITY_ASKS = [
-    "**Drop a comment below with:**\n- Your current {domain} stack\n- Biggest pain points you face\n- Whether this type of solution would help your team",
-    "**I'd love to know:**\n- How you're handling this today\n- What workarounds you've built\n- If this matches your experience",
-    "**Quick ask:**\n- What's your current setup?\n- Where do you feel the most pain?\n- Would this approach solve real problems for you?",
-    "**Help me understand:**\n- Your biggest {domain} headaches\n- Tools you love vs. hate\n- What would make your day-to-day easier"
+# Same engagement elements as your working code
+ENGAGEMENT_HOOKS = [
+    "💬 What's your experience with this? Drop a comment!",
+    "🔥 Tag someone who needs to see this discussion!",
+    "💡 Have a different approach? I'd love to hear it!",
+    "🚀 What challenges are you facing with this?",
+    "⚡ Agree or disagree? Let's discuss in the comments!",
+    "🎯 What's your biggest pain point here? Share below!",
+    "🛠️ Which tools have worked best for you?",
+    "📈 What results have you seen with different approaches?",
+    "🤔 What would you add to this list?",
+    "💪 Ready to solve this together? Let's connect!"
 ]
 
-# Validation-focused hashtags
-VALIDATION_HASHTAGS = [
-    "#DevOps", "#Kubernetes", "#CloudNative", "#Observability", "#TechTrends", 
-    "#SRE", "#Monitoring", "#CostOptimization", "#AI", "#Innovation", 
-    "#TechLeadership", "#CloudComputing", "#Automation", "#DigitalTransformation",
-    "#CommunityFeedback", "#ProductValidation", "#TechSurvey"
+# Validation-focused CTAs
+VALIDATION_CTAS = [
+    "🔍 Genuinely curious about your experiences - please share!",
+    "💭 Would love to hear how you're tackling this challenge!",
+    "🤝 Building solutions starts with understanding problems - help me learn!",
+    "📊 Your insights would be incredibly valuable for the community!",
+    "🎯 What am I missing from this analysis? Set me straight!",
+    "💡 Crowdsourcing wisdom from the best DevOps minds - that's you!",
+    "🚀 Together we can figure out better approaches to this!",
+    "⭐ The community's experience is worth more than any survey!",
+    "🔧 Real-world insights beat theoretical solutions every time!",
+    "🌟 DevOps folks have the best war stories - share yours!"
 ]
 
 class PostHistoryManager:
@@ -268,7 +178,19 @@ class PostHistoryManager:
             # Use sequence matcher to determine similarity ratio
             similarity = SequenceMatcher(None, normalized_content, normalized_previous).ratio()
             if similarity > threshold:
-                logger.info(f"Content is too similar to a previous post (similarity: {similarity:.2f})")
+                logger.info("LinkedIn validation post automation completed successfully.")
+    
+    except Exception as e:
+        logger.error(f"Error during LinkedIn post automation: {e}")
+        # Output for GitHub Actions
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
+                f.write("post_status=failed\n")
+        exit(1)
+
+
+if __name__ == "__main__":
+    main()(f"Content is too similar to a previous post (similarity: {similarity:.2f})")
                 return True
         
         return False
@@ -296,269 +218,285 @@ class PostHistoryManager:
         except Exception as e:
             logger.warning(f"Failed to add post to history: {e}")
 
-class FeedbackPostGenerator:
-    """Generates LinkedIn posts focused on gathering community feedback and validation."""
+class GeminiValidationGenerator:
+    """Generates validation-focused K8s platform posts using Gemini AI - same structure as working code."""
     
-    def __init__(self, api_key: str = None, history_manager: PostHistoryManager = None):
+    def __init__(self, api_key: str, history_manager: PostHistoryManager):
         """
-        Initialize the feedback post generator.
+        Initialize the Gemini validation generator.
         
         Args:
-            api_key: Optional Gemini API key for enhanced content generation
+            api_key: Gemini API key
             history_manager: Post history manager for checking similarity
         """
         self.api_key = api_key
-        self.history_manager = history_manager or PostHistoryManager()
-        if api_key:
-            self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+        self.history_manager = history_manager
     
-    def generate_validation_post(self, problem_type: str = None) -> Dict[str, str]:
+    def generate_topic(self) -> str:
         """
-        Generate a validation-focused LinkedIn post.
+        Generate a specific K8s validation topic.
         
-        Args:
-            problem_type: Specific problem type to focus on
-            
         Returns:
-            Dictionary with title and content
+            Generated topic
         """
-        # Select problem scenario
-        if problem_type and problem_type in K8S_PROBLEM_SCENARIOS:
-            scenario = K8S_PROBLEM_SCENARIOS[problem_type]
-        else:
-            scenario = random.choice(list(K8S_PROBLEM_SCENARIOS.values()))
+        # Use Gemini to generate a specific topic - same logic as working code
+        url = f"{self.api_url}?key={self.api_key}"
         
-        # Select post template
-        template = random.choice(VALIDATION_POST_TEMPLATES)
+        # Generate a random seed for variation
+        random_seed = random.randint(1, 10000)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         
-        # Build the post content
-        content_parts = []
+        # Choose a random K8s validation topic as starting point
+        base_topic = random.choice(K8S_VALIDATION_TOPICS)
         
-        # Hook
-        content_parts.append(template["hook"].format(**scenario))
-        content_parts.append("")
+        prompt = f"""Generate a specific, technical topic related to "{base_topic}" that would make a good LinkedIn validation post. 
         
-        # Problem statement
-        content_parts.append(template["problem_intro"].format(**scenario))
+        The topic should be specific and focused on community feedback gathering about Kubernetes platform challenges.
         
-        # Pain points
-        if "pain_points" in template:
-            for pain_point in template["pain_points"]:
-                content_parts.append(pain_point.format(**scenario))
-        content_parts.append("")
+        It should be about real problems DevOps engineers face that could generate discussion and validation.
         
-        # Solution vision
-        content_parts.append(template["solution_intro"])
+        DO NOT include any explanations, just return the topic as a short title (5-10 words).
         
-        # Solution features
-        if "solution_points" in template:
-            features = scenario.get("features", [])
-            for i, solution_point in enumerate(template["solution_points"]):
-                if i < len(features):
-                    content_parts.append(solution_point.format(
-                        feature1=features[0] if len(features) > 0 else "Advanced feature",
-                        feature2=features[1] if len(features) > 1 else "Smart automation",
-                        feature3=features[2] if len(features) > 2 else "Intelligent insights",
-                        feature4=features[3] if len(features) > 3 else "Cost optimization",
-                        feature5=features[4] if len(features) > 4 else "AI-powered analysis",
-                        feature6=features[5] if len(features) > 5 else "Seamless integration"
-                    ))
-        content_parts.append("")
+        Random seed: {random_seed}
+        Timestamp: {timestamp}
+        """
         
-        # Scenario example
-        content_parts.append(template["scenario_intro"])
-        if "scenario" in scenario:
-            for step in scenario["scenario"]:
-                content_parts.append(step)
-        content_parts.append("")
-        
-        # Engagement questions
-        content_parts.append("**My questions for you:**")
-        for question in template["engagement_questions"]:
-            content_parts.append(question.format(**scenario))
-        content_parts.append("")
-        
-        # Add community engagement
-        community_context = "I'm genuinely curious about your experiences and whether this resonates with the community. The Kubernetes ecosystem is amazing but sometimes feels like you need a PhD to get proper observability 😅"
-        content_parts.append(community_context)
-        content_parts.append("")
-        
-        # Community ask
-        community_ask = random.choice(COMMUNITY_ASKS).format(**scenario)
-        content_parts.append(community_ask)
-        content_parts.append("")
-        
-        # Appreciation
-        appreciation = random.choice(VALIDATION_ENGAGEMENT_ELEMENTS)
-        content_parts.append(appreciation)
-        content_parts.append("")
-        
-        # Hashtags
-        selected_hashtags = random.sample(VALIDATION_HASHTAGS, random.randint(10, 14))
-        hashtag_string = " ".join(selected_hashtags)
-        content_parts.append(hashtag_string)
-        
-        # Join all parts
-        full_content = "\n".join(content_parts)
-        
-        # Check if content is similar to previous posts
-        if self.history_manager.is_similar_to_previous(full_content):
-            logger.info("Generated content too similar to previous post, regenerating...")
-            # Try with different template
-            template = random.choice(VALIDATION_POST_TEMPLATES)
-            # Regenerate with more randomization
-            return self.generate_validation_post(problem_type)
-        
-        # Generate title
-        title = f"K8s {problem_type.replace('_', ' ').title()} - Community Feedback"
-        
-        return {
-            "title": title,
-            "content": full_content,
-            "problem_type": problem_type or "general_observability"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.9,
+                "topK": 40,
+                "topP": 0.95,
+                "maxOutputTokens": 50
+            }
         }
-    
-    def generate_enhanced_post_with_ai(self, problem_type: str = None) -> Dict[str, str]:
-        """
-        Generate an enhanced post using AI for more natural language.
-        
-        Args:
-            problem_type: Specific problem type to focus on
-            
-        Returns:
-            Dictionary with title and content
-        """
-        if not self.api_key:
-            logger.warning("No API key provided, falling back to template-based generation")
-            return self.generate_validation_post(problem_type)
-        
-        # Get base scenario
-        if problem_type and problem_type in K8S_PROBLEM_SCENARIOS:
-            scenario = K8S_PROBLEM_SCENARIOS[problem_type]
-        else:
-            problem_type = random.choice(list(K8S_PROBLEM_SCENARIOS.keys()))
-            scenario = K8S_PROBLEM_SCENARIOS[problem_type]
-        
-        # Create AI prompt for natural content generation
-        prompt = f"""
-        Generate an engaging LinkedIn post to validate a Kubernetes platform idea with the DevOps community.
-
-        CONTEXT:
-        - You're exploring the problem: {scenario['main_problem']}
-        - You want genuine community feedback, not to sell anything
-        - The post should feel authentic and curiosity-driven
-        - You're a DevOps engineer talking to fellow engineers
-
-        POST STRUCTURE:
-        1. Friendly hook acknowledging a shared pain point
-        2. Clearly articulate the specific problem with examples
-        3. Present a vision for a potential solution (without claiming you're building it)
-        4. Include a concrete scenario showing the value
-        5. Ask specific questions to gather feedback
-        6. End with genuine appreciation for community input
-
-        KEY ELEMENTS TO INCLUDE:
-        - Problem: {scenario['main_problem']}
-        - Current pain points around Kubernetes observability/cost management
-        - Vision for unified platform with these capabilities: {', '.join(scenario.get('features', ['intelligent monitoring', 'cost optimization', 'AI assistance']))}
-        - Specific scenario showing 30-second vs 30-minute problem resolution
-        - Questions about their current stack, pain points, and feature priorities
-
-        TONE:
-        - Authentic and curious, not salesy
-        - Technical but approachable
-        - Community-focused ("fellow engineers", "your experience")
-        - Humble and genuinely seeking input
-
-        ENGAGEMENT:
-        - Use emojis strategically for visual appeal
-        - Include specific calls-to-action for comments
-        - Ask about their current tools and challenges
-        - Request feature prioritization feedback
-
-        Make it feel like a genuine conversation starter, not a product pitch. Focus on problem validation and community insights.
-        
-        Length: 15-20 lines with good visual breaks.
-        """
         
         try:
-            url = f"{self.api_url}?key={self.api_key}"
-            
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                "generationConfig": {
-                    "temperature": 0.8,
-                    "topK": 40,
-                    "topP": 0.95,
-                    "maxOutputTokens": 1200
-                }
-            }
-            
             response = requests.post(url, json=payload)
             
-            if response.status_code == 200:
-                response_data = response.json()
-                generated_content = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                
-                # Add hashtags
-                hashtags = random.sample(VALIDATION_HASHTAGS, 12)
-                hashtag_string = " ".join(hashtags)
-                
-                full_content = f"{generated_content.strip()}\n\n{hashtag_string}"
-                
-                # Check if content is similar to previous posts
-                if self.history_manager.is_similar_to_previous(full_content):
-                    logger.info("AI generated content too similar to previous post, trying template fallback...")
-                    return self.generate_validation_post(problem_type)
-                
-                return {
-                    "title": f"K8s {problem_type.replace('_', ' ').title()} Validation Post",
-                    "content": full_content,
-                    "problem_type": problem_type,
-                    "generation_method": "ai_enhanced"
-                }
-            else:
-                logger.warning(f"AI generation failed, falling back to templates: {response.status_code}")
-                return self.generate_validation_post(problem_type)
-                
+            if response.status_code != 200:
+                logger.error(f"Gemini API error: {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                # Fall back to a random topic
+                return random.choice(K8S_VALIDATION_TOPICS)
+            
+            response_data = response.json()
+            topic = response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            
+            # Clean up the topic
+            topic = topic.replace("\"", "").replace("'", "")
+            if ":" in topic:
+                topic = topic.split(":", 1)[1].strip()
+            
+            logger.info(f"Generated topic: {topic}")
+            return topic
+            
         except Exception as e:
-            logger.error(f"Error in AI generation: {e}")
-            return self.generate_validation_post(problem_type)
+            logger.error(f"Error generating topic: {e}")
+            return random.choice(K8S_VALIDATION_TOPICS)
     
-    def generate_multiple_variations(self, problem_type: str = None, count: int = 3) -> List[Dict[str, str]]:
+    def _enhance_content_with_validation_elements(self, content: str, topic: str) -> str:
         """
-        Generate multiple variations of validation posts.
+        Enhance content with validation-focused engagement elements.
         
         Args:
-            problem_type: Specific problem type to focus on
-            count: Number of variations to generate
+            content: Original content
+            topic: Post topic
             
         Returns:
-            List of post dictionaries
+            Enhanced content with validation elements
         """
-        variations = []
+        enhanced_content = content.strip()
         
-        for i in range(count):
-            if self.api_key and i % 2 == 0:  # Mix AI and template-based
-                post = self.generate_enhanced_post_with_ai(problem_type)
+        # Add validation-focused engagement
+        hook = random.choice(ENGAGEMENT_HOOKS)
+        validation_cta = random.choice(VALIDATION_CTAS)
+        enhanced_content += f"\n\n{hook}\n{validation_cta}"
+        
+        # Add trending hashtags for better reach - same as working code
+        validation_hashtags = [
+            "#DevOps", "#Kubernetes", "#CloudNative", "#Observability", "#TechTrends", 
+            "#SRE", "#Monitoring", "#CostOptimization", "#Innovation", "#TechLeadership",
+            "#Engineering", "#SoftwareDevelopment", "#Automation", "#DigitalTransformation",
+            "#Cloud", "#Infrastructure", "#Microservices", "#DevSecOps", "#Technology",
+            "#CloudComputing", "#ArtificialIntelligence", "#OpenSource", "#ProductValidation"
+        ]
+        
+        # Select 8-12 hashtags for maximum reach
+        selected_hashtags = random.sample(validation_hashtags, random.randint(8, 12))
+        hashtag_string = " ".join(selected_hashtags)
+        
+        # Add topic-specific hashtag
+        topic_words = re.findall(r'\b\w+\b', topic)
+        if topic_words:
+            topic_hashtag = "#" + "".join(word.capitalize() for word in topic_words[:3])
+            hashtag_string = f"{topic_hashtag} {hashtag_string}"
+        
+        enhanced_content += f"\n\n{hashtag_string}"
+        
+        return enhanced_content
+    
+    def generate_and_verify_post(self, topic: str, max_attempts: int = 5) -> Dict[str, str]:
+        """
+        Generate a validation post and verify its quality - same structure as working code.
+        
+        Args:
+            topic: The topic to generate content about
+            max_attempts: Maximum number of generation attempts
+            
+        Returns:
+            Dictionary with title and content
+        """
+        logger.info(f"Generating and verifying validation content about: {topic}")
+        
+        for attempt in range(max_attempts):
+            logger.info(f"Generation attempt {attempt + 1}/{max_attempts}")
+            
+            # Generate content
+            content = self._generate_single_content(topic)
+            
+            # Enhance with validation elements
+            enhanced_content = self._enhance_content_with_validation_elements(content, topic)
+            
+            # Check if content is similar to previous posts
+            if self.history_manager.is_similar_to_previous(enhanced_content):
+                logger.info(f"Generated content too similar to previous post, trying again...")
+                continue
+            
+            # Simple quality check - validation posts should ask questions
+            if "?" in enhanced_content and ("experience" in enhanced_content.lower() or "challenge" in enhanced_content.lower()):
+                logger.info(f"Post passed validation quality check")
+                return {
+                    "title": topic,
+                    "content": enhanced_content,
+                    "review": "Validation post with community engagement focus"
+                }
             else:
-                post = self.generate_validation_post(problem_type)
+                logger.info(f"Post lacks validation elements, trying again...")
+        
+        # If we couldn't generate good quality content after max_attempts, use fallback
+        logger.warning(f"Could not generate good validation content after {max_attempts} attempts, using fallback")
+        content = self._generate_fallback_content(topic)
+        enhanced_content = self._enhance_content_with_validation_elements(content, topic)
+        
+        return {
+            "title": topic,
+            "content": enhanced_content,
+            "review": "Fallback validation post"
+        }
+    
+    def _generate_single_content(self, topic: str, temperature: float = 0.9) -> str:
+        """
+        Generate a single validation post content using Gemini API.
+        
+        Args:
+            topic: The topic to generate content about
+            temperature: Randomness parameter (0-1)
             
-            post["variation_number"] = i + 1
-            variations.append(post)
+        Returns:
+            Generated content
+        """
+        url = f"{self.api_url}?key={self.api_key}"
+        
+        # Add randomization to ensure unique content
+        random_seed = random.randint(1, 10000)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        
+        # Choose a random meta-prompt for more variation
+        meta_prompt = random.choice(VALIDATION_META_PROMPTS)
+        prompt = meta_prompt.format(topic=topic)
+        
+        # Add validation-specific guidelines
+        prompt += f"""
+
+        IMPORTANT VALIDATION GUIDELINES:
+        1. Focus on problem identification and community feedback
+        2. Present yourself as exploring the problem space, not selling a solution
+        3. Ask specific questions about their current tools and pain points
+        4. Include phrases like "What's your experience..." and "How are you solving..."
+        5. Make it genuinely curious and community-focused
+        6. Avoid sales language - focus on learning and validation
+        7. Include concrete examples of the problems you're exploring
+        8. End with specific asks for feedback and experiences
+
+        Random seed: {random_seed}
+        Timestamp: {timestamp}
+        """
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": temperature,
+                "topK": 40,
+                "topP": 0.95,
+                "maxOutputTokens": 1000
+            }
+        }
+        
+        try:
+            response = requests.post(url, json=payload)
             
-        return variations
+            if response.status_code != 200:
+                logger.error(f"Gemini API error: {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                raise Exception(f"Gemini API error: {response.status_code}")
+            
+            response_data = response.json()
+            
+            # Extract the generated text from the response
+            generated_text = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Ensure content isn't too long for LinkedIn
+            if len(generated_text) > 2800:
+                generated_text = generated_text[:2700] + "...\n\nWhat's your take on this? Share your thoughts below!"
+            
+            logger.info(f"Successfully generated validation content ({len(generated_text)} chars)")
+            return generated_text
+            
+        except Exception as e:
+            logger.error(f"Error generating content: {e}")
+            # Generate a fallback content
+            return self._generate_fallback_content(topic)
+    
+    def _generate_fallback_content(self, topic: str) -> str:
+        """
+        Generate fallback validation content in case of API failure.
+        
+        Args:
+            topic: The topic to generate content about
+            
+        Returns:
+            Fallback validation content
+        """
+        validation_templates = [
+            f"Hey DevOps community! 👋\n\nBeen thinking about {topic} lately and wondering...\n\nAre you also struggling with:\n→ Tool sprawl across monitoring, logs, and costs\n→ Context switching between different dashboards\n→ Manual correlation when issues arise\n→ Lack of unified K8s observability\n\nWhat if there was a single platform that could:\n✅ Connect to your clusters instantly\n✅ Unify logs, metrics, and cost data\n✅ Provide AI-powered troubleshooting\n✅ Optimize costs automatically\n\n🤔 What's your current setup?\n💭 What would be most valuable to you?\n🎯 Missing anything from this vision?",
+            
+            f"DevOps folks - need your honest input! 🔍\n\nObservation: {topic} seems to be a common pain point.\n\nCurrent reality:\n• Multiple tools for K8s monitoring\n• Logs scattered everywhere\n• Cost visibility is poor\n• Troubleshooting takes forever\n• Context switching kills productivity\n\nImagining a world where:\n🎯 One dashboard shows everything\n⚡ AI helps debug issues instantly\n💰 Cost optimization happens automatically\n🔍 Logs and metrics are correlated\n\n💬 Does this match your experience?\n🛠️ How are you solving this today?\n🚀 What would make the biggest impact?",
+            
+            f"Quick question for the DevOps community... 🤔\n\n{topic} - anyone else finding this challenging?\n\nWhat I'm seeing:\n📊 Great tools exist (Grafana, Prometheus, ELK)\n🔄 But they're all separate systems\n⏰ Correlation takes manual work\n💸 Cost visibility is an afterthought\n🐛 Debugging feels like detective work\n\nWondering about a unified approach:\n• Single pane of glass for K8s\n• AI-powered incident analysis\n• Real-time cost optimization\n• Intelligent log correlation\n\n🔥 Are you frustrated with current solutions?\n💡 What features would be must-haves?\n📈 What results matter most to you?"
+        ]
+        
+        return random.choice(validation_templates)
 
 class LinkedInHelper:
-    """Helper class for LinkedIn API operations - using exact same structure as working code."""
+    """Helper class for LinkedIn API operations - exact same as working code."""
     
     def __init__(self, access_token: str):
         """
@@ -748,169 +686,83 @@ class LinkedInHelper:
                 logger.error("All attempts to post as organization failed.")
                 raise Exception("Failed to post as organization after multiple attempts")
 
-def main():
-    """Main function to generate and optionally publish validation posts."""
+def main() -> None:
+    """Main function to run the K8s validation post automation - exact same structure as working code."""
     try:
-        # Get environment variables - using exact same validation as working code
+        # Get environment variables - exact same validation as working code
         access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
         organization_id = os.environ.get("LINKEDIN_ORGANIZATION_ID")
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
         
-        # Same validation as working code - require all three for posting
         if not access_token or not organization_id or not gemini_api_key:
-            if not access_token:
-                logger.error("Missing LINKEDIN_ACCESS_TOKEN environment variable.")
-            if not organization_id:
-                logger.error("Missing LINKEDIN_ORGANIZATION_ID environment variable.")
-            if not gemini_api_key:
-                logger.error("Missing GEMINI_API_KEY environment variable.")
+            logger.error("Missing required environment variables.")
             logger.error("Ensure LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, and GEMINI_API_KEY are set.")
-            
-            # Still generate post for preview even if missing credentials
-            logger.info("Generating post without publishing...")
+            exit(1)
         
         # Make sure organization_id is just the ID number, not the full URN
         # Strip the "urn:li:organization:" prefix if it's included
-        if organization_id and organization_id.startswith("urn:li:organization:"):
+        if organization_id.startswith("urn:li:organization:"):
             organization_id = organization_id.replace("urn:li:organization:", "")
         
-        # Initialize post history manager - exactly like working code
+        # Initialize post history manager
         history_manager = PostHistoryManager()
         
-        # Initialize generator - same logic as working code
-        if gemini_api_key:
-            logger.info("Using AI-enhanced generation with Gemini API")
-            generator = FeedbackPostGenerator(gemini_api_key, history_manager)
-        else:
-            logger.info("Using template-based generation (set GEMINI_API_KEY for AI enhancement)")
-            generator = FeedbackPostGenerator(None, history_manager)
+        # Initialize validation content generator
+        gemini = GeminiValidationGenerator(gemini_api_key, history_manager)
         
-        # Check for specific problem type
-        problem_type = os.environ.get("PROBLEM_TYPE")
+        # Generate a validation topic
+        topic = gemini.generate_topic()
         
-        # Generate posts
-        if os.environ.get("GENERATE_MULTIPLE") == "true":
-            # Generate multiple variations
-            variations = generator.generate_multiple_variations(problem_type, count=3)
-            
-            print(f"\n{'='*60}")
-            print("GENERATED MULTIPLE VARIATIONS")
-            print('='*60)
-            
-            for i, post in enumerate(variations, 1):
-                print(f"\nVARIATION {i}: {post['title']}")
-                print(f"Problem Type: {post['problem_type']}")
-                print(f"Method: {post.get('generation_method', 'template_based')}")
-                print('-'*40)
-                print(post['content'])
-                print('-'*40)
-            
-            # Ask user which variation to post (if LinkedIn credentials available)
-            if access_token and organization_id:
-                try:
-                    choice = input(f"\nWhich variation would you like to post to LinkedIn? (1-{len(variations)} or 'none'): ").strip()
-                    if choice.isdigit() and 1 <= int(choice) <= len(variations):
-                        post = variations[int(choice) - 1]
-                        print(f"\nSelected variation {choice} for posting...")
-                    elif choice.lower() != 'none':
-                        print("Invalid choice, skipping LinkedIn posting.")
-                        return
-                    else:
-                        print("Skipping LinkedIn posting.")
-                        return
-                except KeyboardInterrupt:
-                    print("\nSkipping LinkedIn posting.")
-                    return
-            else:
-                print("\nMissing LinkedIn credentials - cannot post to LinkedIn.")
-                return
-        else:
-            # Generate single post - same logic as working code
-            if gemini_api_key:
-                post = generator.generate_enhanced_post_with_ai(problem_type)
-            else:
-                post = generator.generate_validation_post(problem_type)
-            
-            print(f"\n{'='*60}")
-            print(f"VALIDATION POST: {post['title']}")
-            print(f"Problem Type: {post['problem_type']}")
-            print(f"Method: {post.get('generation_method', 'template_based')}")
-            print('='*60)
+        # Generate and verify validation post content
+        post = gemini.generate_and_verify_post(topic)
+        
+        # Log the review result
+        logger.info(f"Post quality review: {post.get('review', 'No review available')}")
+        
+        # Debug output mode (if environment variable is set)
+        if os.environ.get("DEBUG_MODE") == "true":
+            logger.info("DEBUG MODE: Printing post without publishing")
+            print("\n" + "="*60)
+            print(f"Topic: {post['title']}")
+            print("-"*60)
             print(post['content'])
-            print('='*60)
+            print("\n" + "="*60)
+            print(f"Quality Review: {post.get('review', 'No review available')}")
+            print("="*60 + "\n")
+            return
         
-        # Post to LinkedIn - exact same logic as working code
-        if access_token and organization_id and gemini_api_key:
-            # Debug output mode (if environment variable is set) - exact same as working code
-            if os.environ.get("DEBUG_MODE") == "true":
-                logger.info("DEBUG MODE: Printing post without publishing")
-                print("\n" + "="*60)
-                print(f"Topic: {post['title']}")
-                print("-"*60)
-                print(post['content'])
-                print("\n" + "="*60)
-                print(f"Quality Review: Generated validation post")
-                print("="*60 + "\n")
-                return
-            
-            # Initialize LinkedIn helper - using exact same class name as working code
-            linkedin = LinkedInHelper(access_token)
-            
-            # Get user profile
-            profile = linkedin.get_user_profile()
-            person_id = profile.get('id')
-            
-            if not person_id:
-                logger.error("Failed to retrieve person ID from profile.")
-                exit(1)
-            
-            # Try to post as the organization - exact same logic as working code
-            try:
-                logger.info("Attempting to post as organization...")
-                linkedin.post_as_organization(person_id, organization_id, post["content"])
-                logger.info("Successfully posted as organization!")
-            except Exception as e:
-                logger.warning(f"Failed to post as organization: {e}")
-                logger.info("Falling back to posting as personal profile...")
-                
-                # If posting as organization fails, fall back to posting as person
-                linkedin.post_as_person(person_id, post["content"])
-                logger.info("Successfully posted as personal profile!")
-            
-            # Log post history - exactly like working code
-            history_manager.add_post(post["title"], post["content"])
-            
-            # Output for GitHub Actions - exactly like working code
-            if os.environ.get("GITHUB_ACTIONS") == "true":
-                with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
-                    f.write(f"post_title={post['title']}\n")
-                    f.write(f"post_status=success\n")
-                    f.write(f"post_quality=Generated validation post\n")
-            
-            logger.info("LinkedIn post automation completed successfully with validation focus.")
+        # Initialize LinkedIn helper
+        linkedin = LinkedInHelper(access_token)
         
-        else:
-            logger.error("Cannot post to LinkedIn - missing required environment variables.")
-            print(f"\n{'='*60}")
-            print("LINKEDIN POSTING FAILED:")
-            print("Missing required environment variables:")
-            if not access_token:
-                print("- LINKEDIN_ACCESS_TOKEN")
-            if not organization_id:
-                print("- LINKEDIN_ORGANIZATION_ID") 
-            if not gemini_api_key:
-                print("- GEMINI_API_KEY")
-            print("Set all three variables to enable LinkedIn posting.")
-            print('='*60)
+        # Get user profile
+        profile = linkedin.get_user_profile()
+        person_id = profile.get('id')
         
-    except Exception as e:
-        logger.error(f"Error during LinkedIn post automation: {e}")
+        if not person_id:
+            logger.error("Failed to retrieve person ID from profile.")
+            exit(1)
+        
+        # Try to post as the organization
+        try:
+            logger.info("Attempting to post as organization...")
+            linkedin.post_as_organization(person_id, organization_id, post["content"])
+            logger.info("Successfully posted as organization!")
+        except Exception as e:
+            logger.warning(f"Failed to post as organization: {e}")
+            logger.info("Falling back to posting as personal profile...")
+            
+            # If posting as organization fails, fall back to posting as person
+            linkedin.post_as_person(person_id, post["content"])
+            logger.info("Successfully posted as personal profile!")
+        
+        # Log post history
+        history_manager.add_post(post["title"], post["content"])
+        
         # Output for GitHub Actions
         if os.environ.get("GITHUB_ACTIONS") == "true":
             with open(os.environ.get("GITHUB_OUTPUT", ""), "a") as f:
-                f.write("post_status=failed\n")
-                f.write(f"error={str(e)}\n")
-        exit(1)
-
-if __name__ == "__main__":
-    main()
+                f.write(f"post_title={post['title']}\n")
+                f.write(f"post_status=success\n")
+                f.write(f"post_quality={post.get('review', 'No review available')}\n")
+        
+        logger.info
