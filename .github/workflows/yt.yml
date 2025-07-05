@@ -1,69 +1,69 @@
-name: YouTube Facts Automation
+# name: YouTube Facts Automation
 
-on:
-  schedule:
-    # Run twice daily at 10:00 AM and 5:00 PM UTC
-    - cron: '0 10,17 * * *'
-  push:
-    branches:
-      - main
-  # Also allow manual trigger
-  workflow_dispatch:
+# on:
+#   schedule:
+#     # Run twice daily at 10:00 AM and 5:00 PM UTC
+#     - cron: '0 10,17 * * *'
+#   push:
+#     branches:
+#       - main
+#   # Also allow manual trigger
+#   workflow_dispatch:
 
-jobs:
-  generate-and-upload:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+# jobs:
+#   generate-and-upload:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
         
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
           
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg imagemagick
-          ffmpeg -version
-          convert --version
+#       - name: Install dependencies
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y ffmpeg imagemagick
+#           ffmpeg -version
+#           convert --version
           
-          # Allow ImageMagick to read/write any size image
-          sudo sed -i 's/policy domain="resource" name="disk" value="[0-9]*GiB"/policy domain="resource" name="disk" value="8GiB"/' /etc/ImageMagick-6/policy.xml
-          sudo sed -i 's/policy domain="resource" name="memory" value="[0-9]*GiB"/policy domain="resource" name="memory" value="2GiB"/' /etc/ImageMagick-6/policy.xml
-          sudo sed -i 's/policy domain="resource" name="map" value="[0-9]*GiB"/policy domain="resource" name="map" value="1GiB"/' /etc/ImageMagick-6/policy.xml
-          sudo sed -i 's/policy domain="resource" name="width" value="[0-9]*KP"/policy domain="resource" name="width" value="16KP"/' /etc/ImageMagick-6/policy.xml
-          sudo sed -i 's/policy domain="resource" name="height" value="[0-9]*KP"/policy domain="resource" name="height" value="16KP"/' /etc/ImageMagick-6/policy.xml
+#           # Allow ImageMagick to read/write any size image
+#           sudo sed -i 's/policy domain="resource" name="disk" value="[0-9]*GiB"/policy domain="resource" name="disk" value="8GiB"/' /etc/ImageMagick-6/policy.xml
+#           sudo sed -i 's/policy domain="resource" name="memory" value="[0-9]*GiB"/policy domain="resource" name="memory" value="2GiB"/' /etc/ImageMagick-6/policy.xml
+#           sudo sed -i 's/policy domain="resource" name="map" value="[0-9]*GiB"/policy domain="resource" name="map" value="1GiB"/' /etc/ImageMagick-6/policy.xml
+#           sudo sed -i 's/policy domain="resource" name="width" value="[0-9]*KP"/policy domain="resource" name="width" value="16KP"/' /etc/ImageMagick-6/policy.xml
+#           sudo sed -i 's/policy domain="resource" name="height" value="[0-9]*KP"/policy domain="resource" name="height" value="16KP"/' /etc/ImageMagick-6/policy.xml
           
-          npm install fs-extra axios googleapis
+#           npm install fs-extra axios googleapis
         
-      - name: Generate facts and create video
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: node generate-video.js
+#       - name: Generate facts and create video
+#         env:
+#           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+#           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+#           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+#           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+#         run: node generate-video.js
         
-      - name: List files (debugging)
-        run: |
-          echo "Showing content of output_videos directory:"
-          ls -la ./output_videos/
+#       - name: List files (debugging)
+#         run: |
+#           echo "Showing content of output_videos directory:"
+#           ls -la ./output_videos/
           
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
+#       - name: Commit and push changes
+#         run: |
+#           git config --global user.name 'GitHub Actions Bot'
+#           git config --global user.email 'actions@github.com'
           
-          # Add all files in output_videos directory
-          git add output_videos/
-          git add facts_database.json
+#           # Add all files in output_videos directory
+#           git add output_videos/
+#           git add facts_database.json
           
-          # Check if there are changes to commit
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update facts database and add video files [automated]"
-            git push
-          fi
+#           # Check if there are changes to commit
+#           if git diff --staged --quiet; then
+#             echo "No changes to commit"
+#           else
+#             git commit -m "Update facts database and add video files [automated]"
+#             git push
+#           fi
