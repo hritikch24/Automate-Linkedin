@@ -9,6 +9,9 @@ Required environment variables:
 - LINKEDIN_ACCESS_TOKEN: Your LinkedIn API access token
 - LINKEDIN_ORGANIZATION_ID: Your LinkedIn organization/company ID
 - GEMINI_API_KEY: Your Gemini API key
+
+Optional environment variables (added):
+- FREELANCER_MODE (default: "true") -> if "true", posts are framed to attract companies looking for freelance/consulting DevOps help
 """
 
 import os
@@ -86,6 +89,41 @@ BUSINESS_VALUE_PROMPTS = [
     Use emojis and professional tone."""
 ]
 
+# 🔹 ADD: Freelancer/Hiring-focused prompts (keeps originals; we optionally prefer these at runtime)
+FREELANCER_PROMPTS = [
+    """Write a LinkedIn post about how {topic} helps startups avoid hiring a full-time DevOps team while still hitting enterprise-grade reliability.
+    Frame it from the perspective of a freelance DevOps consultant who delivers outcomes quickly.
+
+    Include:
+    - Cost savings vs hiring full-time staff
+    - Faster implementation speed
+    - A mini case-style example with realistic numbers
+    - Clear, hiring-focused CTA (fractional/freelance DevOps)
+
+    Use emojis, concise paragraphs, and hashtags for #DevOps, #Cloud, #Startups, #Freelance.""",
+
+    """Generate a LinkedIn post explaining how {topic} solves real startup pain points and how I provide this as a freelance DevOps consultant.
+
+    Emphasize:
+    - Cutting cloud bills with autoscaling & rightsizing
+    - Speeding up releases with CI/CD improvements
+    - Reducing security risks with DevSecOps automation
+    - Scaling infra without scaling headcount
+
+    End with CTAs such as:
+    - "Need on-demand DevOps help? DM me."
+    - "I help startups scale without hiring full-time. Let’s chat." """,
+
+    """Create a hiring-focused LinkedIn post on {topic} with a strong opening hook.
+    Audience: founders, CTOs, and hiring managers who need flexible DevOps help.
+
+    Must include:
+    - A hook that calls out a common pain (e.g., ballooning AWS bill, slow releases)
+    - 3-4 bullet points on the approach
+    - Concrete result metrics (time/cost/reliability)
+    - A soft, professional CTA to work with a freelancer/consultant"""
+]
+
 # High-converting CTAs
 CONVERSION_CTAS = [
     "💰 Want to cut your AWS bill by 40%? DM 'OPTIMIZE' for a free audit!",
@@ -96,6 +134,27 @@ CONVERSION_CTAS = [
     "🛠️ Struggling with manual deployments? Comment 'AUTOMATE'!",
     "💡 Want enterprise infrastructure at startup cost? DM 'ENTERPRISE'!",
     "🎯 Ready to eliminate technical debt? Comment 'CLEANUP'!"
+]
+
+# 🔹 ADD: Extra freelance-positioned CTAs (keeps originals; we will use both)
+FREELANCE_CTAS = [
+    "💼 Need DevOps help without hiring full-time? DM me.",
+    "🚀 Scaling your startup? I offer fractional DevOps expertise. Let’s connect.",
+    "📊 Want infra savings and faster releases? Message me for freelance support.",
+    "🔒 Security + scalability without full-time hires — DM me.",
+    "⚡ I help startups cut costs & boost uptime as a consultant. Reach out!",
+    "🛠️ Freelance DevOps support: cheaper than hiring, faster than waiting. DM me.",
+    "💡 I’ve helped startups cut AWS bills 40% — let’s discuss yours.",
+    "🎯 Looking for flexible DevOps support? Let’s connect."
+]
+
+# 🔹 ADD: Strong opening hooks to grab attention
+OPENING_HOOKS = [
+    "Why is your AWS bill bigger than your payroll? 🤔",
+    "Scaling shouldn’t require doubling your DevOps headcount. 🚀",
+    "Stop burning runway on idle cloud resources. 💸",
+    "Your release pipeline shouldn’t be your bottleneck. ⛓️",
+    "Security shouldn’t slow your team down. 🔒"
 ]
 
 # Business metrics
@@ -248,7 +307,46 @@ class GeminiContentGenerator:
         self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
         self.history_manager = history_manager
         self.validator = ContentValidator()
-    
+
+    # 🔹 ADD: helpers for freelancer positioning
+    def _opening_hook(self) -> str:
+        try:
+            return random.choice(OPENING_HOOKS)
+        except Exception:
+            return ""
+
+    def _positioning_snippet(self) -> str:
+        return ("If your startup needs DevOps outcomes without a full-time hire, "
+                "I provide fractional/freelance support to cut costs, speed up releases, and boost reliability.")
+
+    def _generate_hashtags_freelance(self, topic: str) -> str:
+        base_hashtags = ["#DevOps", "#Cloud", "#Startups", "#Freelance", "#TechConsulting"]
+        additional = []
+        topic_lower = topic.lower()
+        if "cost" in topic_lower or "optimization" in topic_lower:
+            additional.extend(["#CloudSavings", "#CostOptimization"])
+        if "security" in topic_lower:
+            additional.extend(["#DevSecOps", "#Cybersecurity"])
+        if "kubernetes" in topic_lower:
+            additional.extend(["#Kubernetes", "#ContainerOrchestration"])
+        if "startup" in topic_lower:
+            additional.extend(["#ScaleUp", "#FractionalCTO"])
+        all_hashtags = base_hashtags + additional[:4]
+        # de-dupe & limit to 8
+        seen, out = set(), []
+        for t in all_hashtags:
+            t = t if t.startswith("#") else f"#{t}"
+            tl = t.lower()
+            if tl not in seen:
+                out.append(t)
+                seen.add(tl)
+            if len(out) >= 8:
+                break
+        return " ".join(out)
+
+    def _enforce_length(self, s: str, limit: int = 3000) -> str:
+        return s if len(s) <= limit else s[:limit-60].rstrip() + "\n\n…(truncated to fit)"
+
     def generate_business_post(self, max_attempts: int = 5) -> Dict[str, Any]:
         """Generate a business-focused post."""
         for attempt in range(max_attempts):
@@ -295,7 +393,18 @@ class GeminiContentGenerator:
         """Generate content using Gemini API."""
         url = f"{self.api_url}?key={self.api_key}"
         
-        prompt_template = random.choice(BUSINESS_VALUE_PROMPTS)
+        prompt_template = random.choice(BUSINESS_VALUE_PROMPTS)  # (kept original line)
+        # 🔹 ADD: prefer freelancer prompts if enabled (does not remove the original line)
+        try:
+            freelancer_mode = os.environ.get("FREELANCER_MODE", "true").lower() == "true"
+        except Exception:
+            freelancer_mode = True
+        if freelancer_mode:
+            try:
+                prompt_template = random.choice(FREELANCER_PROMPTS)
+            except Exception:
+                pass
+        
         prompt = prompt_template.format(topic=topic)
         
         prompt += f"""
@@ -343,22 +452,47 @@ class GeminiContentGenerator:
             return self._generate_fallback_content(topic)
     
     def _enhance_content(self, content: str, topic: str) -> str:
-        """Enhance content with business elements."""
+        """Enhance content with business elements and freelancer positioning (additive only)."""
         enhanced = content.strip()
-        
-        # Add metrics if missing
+
+        # 🔹 ADD: opening hook at the very top (only if not already starting with an emoji/bold/hook)
+        hook = self._opening_hook()
+        if hook and not re.match(r"^[\W_]{0,3}[A-Za-z0-9#]", enhanced):
+            # content already starts with punctuation/emoji; leave as-is
+            pass
+        else:
+            enhanced = f"{hook}\n\n{enhanced}" if hook else enhanced
+
+        # Add metrics if missing (existing behavior kept)
         if not re.search(r'\d+%', enhanced):
             metric = random.choice(BUSINESS_METRICS)
             enhanced += f"\n\n📊 Real impact: {metric}"
-        
-        # Add CTA
-        cta = random.choice(CONVERSION_CTAS)
+
+        # 🔹 ADD: freelance positioning paragraph before CTA
+        try:
+            freelancer_mode = os.environ.get("FREELANCER_MODE", "true").lower() == "true"
+        except Exception:
+            freelancer_mode = True
+        if freelancer_mode:
+            enhanced += f"\n\n{self._positioning_snippet()}"
+
+        # Add CTA (now from combined pools; original CTAs preserved)
+        try:
+            cta_pool = CONVERSION_CTAS + FREELANCE_CTAS
+        except Exception:
+            cta_pool = CONVERSION_CTAS
+        cta = random.choice(cta_pool)
         enhanced += f"\n\n{cta}"
         
-        # Add hashtags
-        hashtags = self._generate_hashtags(topic)
+        # Add hashtags (use freelancer-flavored set if enabled; original kept)
+        if freelancer_mode:
+            hashtags = self._generate_hashtags_freelance(topic)
+        else:
+            hashtags = self._generate_hashtags(topic)
         enhanced += f"\n\n{hashtags}"
-        
+
+        # 🔹 ADD: hard length cap to fit LinkedIn 3,000 chars
+        enhanced = self._enforce_length(enhanced, limit=3000)
         return enhanced
     
     def _generate_hashtags(self, topic: str) -> str:
@@ -383,7 +517,8 @@ class GeminiContentGenerator:
     def _generate_fallback_content(self, topic: str) -> str:
         """Generate fallback content."""
         metric = random.choice(BUSINESS_METRICS)
-        cta = random.choice(CONVERSION_CTAS)
+        cta_pool = CONVERSION_CTAS + FREELANCE_CTAS
+        cta = random.choice(cta_pool)
         
         content = f"""🚀 {topic}: Game-Changer for Growing Startups
 
