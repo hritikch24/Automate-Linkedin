@@ -12,6 +12,10 @@ Required environment variables:
 
 Optional environment variables (added):
 - FREELANCER_MODE (default: "true") -> if "true", posts are framed to attract companies looking for freelance/consulting DevOps help
+- SIMILARITY_THRESHOLD (default: "0.75") -> combined similarity threshold to reject content as too similar
+- DIVERSITY_DAYS (default: "10") -> avoid repeating the same topic within N days
+- MAX_EMOJIS (default: "6") -> cap emojis to keep it human, not spammy
+- MAX_HASHTAGS (default: "8") -> limit hashtags
 """
 
 import os
@@ -20,9 +24,10 @@ import random
 import logging
 import re
 import time
-from datetime import datetime
-from typing import Dict, List, Any, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Tuple
 from difflib import SequenceMatcher
+import hashlib
 import requests
 
 # Configure logging
@@ -31,6 +36,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# -----------------------------
+# Existing content definitions
+# -----------------------------
 
 # Business-focused DevOps topics
 BUSINESS_FOCUSED_TOPICS = [
@@ -89,7 +98,7 @@ BUSINESS_VALUE_PROMPTS = [
     Use emojis and professional tone."""
 ]
 
-# 🔹 ADD: Freelancer/Hiring-focused prompts (keeps originals; we optionally prefer these at runtime)
+# 🔹 ADD: Freelancer/Hiring-focused prompts (keeps originals; optionally preferred via FREELANCER_MODE)
 FREELANCER_PROMPTS = [
     """Write a LinkedIn post about how {topic} helps startups avoid hiring a full-time DevOps team while still hitting enterprise-grade reliability.
     Frame it from the perspective of a freelance DevOps consultant who delivers outcomes quickly.
@@ -136,7 +145,7 @@ CONVERSION_CTAS = [
     "🎯 Ready to eliminate technical debt? Comment 'CLEANUP'!"
 ]
 
-# 🔹 ADD: Extra freelance-positioned CTAs (keeps originals; we will use both)
+# 🔹 ADD: Extra freelance-positioned CTAs (keeps originals; combined in pool)
 FREELANCE_CTAS = [
     "💼 Need DevOps help without hiring full-time? DM me.",
     "🚀 Scaling your startup? I offer fractional DevOps expertise. Let’s connect.",
@@ -157,6 +166,19 @@ OPENING_HOOKS = [
     "Security shouldn’t slow your team down. 🔒"
 ]
 
+# 🔹 ADD: Mini case-studies for realism (lightweight, generic but believable)
+MINI_CASE_STUDIES = [
+    ("Seed-stage SaaS, 8 engineers",
+     "Rightsized EC2, moved to GP3 volumes, and tightened autoscaling. "
+     "Outcome: ~38% monthly savings and deploy time down from 22m → 9m."),
+    ("Fintech MVP, pre-series A",
+     "Introduced staged CI/CD with canary + feature flags. "
+     "Outcome: 3x faster releases and rollback time cut to under 2 minutes."),
+    ("B2B analytics startup",
+     "Centralized logging + metrics with alert thresholds. "
+     "Outcome: MTTR improved from ~90m to ~18m and 99.9% monthly uptime."),
+]
+
 # Business metrics
 BUSINESS_METRICS = [
     "40-60% cost reduction in first 3 months",
@@ -167,6 +189,9 @@ BUSINESS_METRICS = [
     "70% faster time-to-market"
 ]
 
+# -----------------------------
+# Existing validator
+# -----------------------------
 
 class ContentValidator:
     """Validates content quality and business value."""
@@ -229,6 +254,9 @@ class ContentValidator:
             'has_cta': cta_count >= 2
         }
 
+# -----------------------------
+# Existing history manager
+# -----------------------------
 
 class PostHistoryManager:
     """Manages post history to avoid duplicates."""
@@ -240,8 +268,12 @@ class PostHistoryManager:
             history_dir = os.path.join(os.getcwd(), ".github", "post-history")
             os.makedirs(history_dir, exist_ok=True)
             self.history_file = os.path.join(history_dir, "linkedin-posts.log")
+            # 🔹 ADD: a small state file for diversity/rotation
+            self.state_file = os.path.join(history_dir, "state.json")
         
         self.post_history = self._load_history()
+        # 🔹 ADD: load diversity state
+        self.state = self._load_state()
     
     def _load_history(self) -> List[str]:
         """Load post history from file."""
@@ -263,8 +295,53 @@ class PostHistoryManager:
             logger.warning(f"Failed to load post history: {e}")
             return []
     
+    def _load_state(self) -> Dict[str, Any]:
+        """🔹 ADD: Load diversity state."""
+        try:
+            if hasattr(self, "state_file") and os.path.exists(self.state_file):
+                with open(self.state_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load state: {e}")
+        return {"recent_topics": [], "recent_ctas": [], "recent_hooks": [], "recent_hashes": []}
+
+    def _save_state(self) -> None:
+        """🔹 ADD: Save diversity state."""
+        try:
+            if hasattr(self, "state_file"):
+                os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+                with open(self.state_file, "w", encoding="utf-8") as f:
+                    json.dump(self.state, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to save state: {e}")
+    
+    def _normalize(self, text: str) -> str:
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
+
+    def _tokenize(self, text: str) -> List[str]:
+        return re.findall(r"\w+", text.lower())
+
+    def _cosine_sim(self, a: str, b: str) -> float:
+        from collections import Counter
+        ta, tb = Counter(self._tokenize(a)), Counter(self._tokenize(b))
+        keys = set(ta) | set(tb)
+        dot = sum(ta[k]*tb[k] for k in keys)
+        na = sum(v*v for v in ta.values())**0.5
+        nb = sum(v*v for v in tb.values())**0.5
+        return dot / (na*nb) if na and nb else 0.0
+
+    def _jaccard(self, a: str, b: str, n: int = 3) -> float:
+        def ngrams(s, n):
+            toks = self._tokenize(s)
+            return set(tuple(toks[i:i+n]) for i in range(max(0, len(toks)-n+1)))
+        A, B = ngrams(a, n), ngrams(b, n)
+        return len(A & B) / len(A | B) if A and B else 0.0
+
     def is_similar_to_previous(self, content: str, threshold: float = 0.6) -> bool:
-        """Check similarity to previous posts."""
+        """Check similarity to previous posts (existing)."""
         def normalize(text):
             text = text.lower()
             text = re.sub(r'[^\w\s]', '', text)
@@ -281,9 +358,62 @@ class PostHistoryManager:
                 return True
         
         return False
+
+    # 🔹 ADD: stronger similarity guard (cosine + Jaccard + SequenceMatcher)
+    def is_too_similar(self, content: str, combo_threshold: float) -> bool:
+        new = content
+        for prev in self.post_history[-50:]:  # recent 50 only
+            seq = SequenceMatcher(None, self._normalize(new), self._normalize(prev)).ratio()
+            cos = self._cosine_sim(new, prev)
+            jac = self._jaccard(new, prev, n=3)
+            score = max(seq, (cos + jac) / 2.0)  # robust combo
+            if score >= combo_threshold:
+                logger.info(f"Similarity block: seq={seq:.2f} cos={cos:.2f} jac={jac:.2f} combo={score:.2f}")
+                return True
+        return False
+
+    # 🔹 ADD: topic rotation (avoid repeating recently)
+    def topic_allowed(self, topic: str, diversity_days: int = 10) -> bool:
+        now = datetime.now()
+        for entry in self.state.get("recent_topics", []):
+            if entry.get("topic") == topic:
+                ts = datetime.fromisoformat(entry.get("ts"))
+                if (now - ts).days < diversity_days:
+                    logger.info(f"Topic '{topic}' used { (now - ts).days } days ago; rotating.")
+                    return False
+        return True
+
+    def remember_topic(self, topic: str) -> None:
+        now = datetime.now().isoformat()
+        topics = [e for e in self.state.get("recent_topics", []) if e.get("topic") != topic]
+        topics.append({"topic": topic, "ts": now})
+        # keep last 20
+        self.state["recent_topics"] = topics[-20:]
+        self._save_state()
+
+    def remember_choice(self, key: str, value: str) -> None:
+        arr = self.state.get(key, [])
+        arr.append({"val": value, "ts": datetime.now().isoformat()})
+        self.state[key] = arr[-30:]
+        self._save_state()
+
+    def remember_hash(self, content: str) -> None:
+        h = hashlib.sha256(self._normalize(content).encode()).hexdigest()[:16]
+        arr = self.state.get("recent_hashes", [])
+        arr.append({"hash": h, "ts": datetime.now().isoformat()})
+        self.state["recent_hashes"] = arr[-100:]
+        self._save_state()
+
+    def seen_hash(self, content: str) -> bool:
+        h = hashlib.sha256(self._normalize(content).encode()).hexdigest()[:16]
+        for obj in self.state.get("recent_hashes", []):
+            if obj.get("hash") == h:
+                logger.info("Exact/near-exact hash seen recently; regenerating.")
+                return True
+        return False
     
     def add_post(self, title: str, content: str, score: int) -> None:
-        """Add post to history."""
+        """Add post to history (existing)."""
         try:
             os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -298,6 +428,86 @@ class PostHistoryManager:
         except Exception as e:
             logger.warning(f"Failed to add post to history: {e}")
 
+# -----------------------------
+# 🔹 ADD: Humanizer utilities
+# -----------------------------
+
+class Humanizer:
+    """Make copy feel human, varied, and credible—without removing original content."""
+    def __init__(self):
+        try:
+            self.max_emojis = int(os.environ.get("MAX_EMOJIS", "6"))
+        except Exception:
+            self.max_emojis = 6
+        try:
+            self.max_hashtags = int(os.environ.get("MAX_HASHTAGS", "8"))
+        except Exception:
+            self.max_hashtags = 8
+
+    def limit_emojis(self, text: str) -> str:
+        # emojis approximated as non-word unicode; conservative removal
+        emojis = re.findall(r"[^\w\s,.\-/#@!?\(\)\'\"]", text)
+        excess = max(0, len(emojis) - self.max_emojis)
+        if excess > 0:
+            text = re.sub(r"[^\w\s,.\-/#@!?\(\)\'\"]", "", text, count=excess)
+        return text
+
+    def limit_hashtags(self, text: str) -> str:
+        tags = re.findall(r"(#\w+)", text, flags=re.I)
+        if len(tags) > self.max_hashtags:
+            keep = set(tags[:self.max_hashtags])
+            parts = text.split()
+            out = []
+            for p in parts:
+                if p.startswith("#") and p not in keep:
+                    continue
+                out.append(p)
+            return " ".join(out)
+        return text
+
+    def add_mini_case(self, text: str) -> str:
+        label, detail = random.choice(MINI_CASE_STUDIES)
+        block = f"\n\n**Quick win from a recent engagement ({label}):**\n- {detail}"
+        return text + block
+
+    def soften_claims(self, text: str) -> str:
+        # Add light caveat when strong % claims are present
+        if re.search(r"\b\d{2,}%\b", text):
+            text += "\n\n*Actual results depend on baseline and workload; I share assumptions and a quick plan upfront.*"
+        return text
+
+    def vary_opening(self, text: str, hook: Optional[str]) -> str:
+        if not hook:
+            return text
+        # If text already has a bold/emoji heading, prepend a short one-liner instead of duplicating
+        if re.match(r"^[^\w]*[A-Za-z0-9#]", text):
+            return f"{hook}\n\n{text}"
+        return text
+
+    def human_tone(self, text: str) -> str:
+        # Light contractions and more "I/we" voice
+        text = re.sub(r"\bis not\b", "isn't", text, flags=re.I)
+        text = re.sub(r"\bdo not\b", "don't", text, flags=re.I)
+        text = re.sub(r"\bwe are\b", "we're", text, flags=re.I)
+        text = re.sub(r"\bI am\b", "I'm", text, flags=re.I)
+        # Remove repetitive filler phrases if duplicated
+        text = re.sub(r"(Let’s connect\.)\s*\1+", r"\1", text, flags=re.I)
+        return text
+
+    def clean_spaces(self, text: str) -> str:
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text
+
+    def finish(self, text: str) -> str:
+        text = self.limit_emojis(text)
+        text = self.limit_hashtags(text)
+        text = self.clean_spaces(text)
+        return text
+
+# -----------------------------
+# Existing Gemini generator
+# -----------------------------
 
 class GeminiContentGenerator:
     """Generates business-focused DevOps content."""
@@ -307,6 +517,16 @@ class GeminiContentGenerator:
         self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
         self.history_manager = history_manager
         self.validator = ContentValidator()
+        # 🔹 ADD
+        self.humanizer = Humanizer()
+        try:
+            self.sim_threshold = float(os.environ.get("SIMILARITY_THRESHOLD", "0.75"))
+        except Exception:
+            self.sim_threshold = 0.75
+        try:
+            self.diversity_days = int(os.environ.get("DIVERSITY_DAYS", "10"))
+        except Exception:
+            self.diversity_days = 10
 
     # 🔹 ADD: helpers for freelancer positioning
     def _opening_hook(self) -> str:
@@ -347,25 +567,51 @@ class GeminiContentGenerator:
     def _enforce_length(self, s: str, limit: int = 3000) -> str:
         return s if len(s) <= limit else s[:limit-60].rstrip() + "\n\n…(truncated to fit)"
 
+    # 🔹 ADD: helper to pick a topic respecting diversity window
+    def _pick_diverse_topic(self) -> str:
+        shuffled = BUSINESS_FOCUSED_TOPICS[:]
+        random.shuffle(shuffled)
+        for t in shuffled:
+            if self.history_manager.topic_allowed(t, self.diversity_days):
+                return t
+        # fallback to any topic if all are blocked
+        return random.choice(BUSINESS_FOCUSED_TOPICS)
+
     def generate_business_post(self, max_attempts: int = 5) -> Dict[str, Any]:
         """Generate a business-focused post."""
         for attempt in range(max_attempts):
             logger.info(f"Generation attempt {attempt + 1}/{max_attempts}")
             
-            topic = random.choice(BUSINESS_FOCUSED_TOPICS)
+            # 🔹 CHANGED by addition: topic selection with diversity window
+            topic = self._pick_diverse_topic()
             content = self._generate_content(topic)
             enhanced_content = self._enhance_content(content, topic)
+
+            # 🔹 ADD: humanize & add a mini case for realism
+            if random.random() < 0.75:
+                enhanced_content = self.humanizer.add_mini_case(enhanced_content)
+            enhanced_content = self.humanizer.soften_claims(enhanced_content)
+            enhanced_content = self.humanizer.human_tone(enhanced_content)
+            enhanced_content = self.humanizer.finish(enhanced_content)
             
-            # Validate content
+            # Validate content (existing)
             validation = self.validator.validate_content(topic, enhanced_content)
             
-            # Check similarity
+            # Check similarity (existing)
             if self.history_manager.is_similar_to_previous(enhanced_content):
-                logger.info("Content too similar, regenerating...")
+                logger.info("Content too similar (legacy check), regenerating...")
+                continue
+
+            # 🔹 ADD: stronger similarity check & hash
+            if self.history_manager.seen_hash(enhanced_content) or self.history_manager.is_too_similar(enhanced_content, self.sim_threshold):
+                logger.info("Content too similar (enhanced check), regenerating...")
                 continue
             
             if validation['is_valid'] and validation['score'] >= 75:
                 logger.info(f"Quality content generated (score: {validation['score']})")
+                # remember diversity signals now
+                self.history_manager.remember_topic(topic)
+                self.history_manager.remember_hash(enhanced_content)
                 return {
                     'title': topic,
                     'content': enhanced_content,
@@ -375,12 +621,21 @@ class GeminiContentGenerator:
             else:
                 logger.info(f"Quality insufficient (score: {validation['score']})")
         
-        # Fallback
+        # Fallback (existing)
         logger.warning("Using fallback content")
-        topic = random.choice(BUSINESS_FOCUSED_TOPICS)
+        topic = self._pick_diverse_topic()
         fallback_content = self._generate_fallback_content(topic)
         enhanced_fallback = self._enhance_content(fallback_content, topic)
+        # humanize fallback as well
+        if random.random() < 0.75:
+            enhanced_fallback = self.humanizer.add_mini_case(enhanced_fallback)
+        enhanced_fallback = self.humanizer.soften_claims(enhanced_fallback)
+        enhanced_fallback = self.humanizer.human_tone(enhanced_fallback)
+        enhanced_fallback = self.humanizer.finish(enhanced_fallback)
+
         validation = self.validator.validate_content(topic, enhanced_fallback)
+        self.history_manager.remember_topic(topic)
+        self.history_manager.remember_hash(enhanced_fallback)
         
         return {
             'title': topic,
@@ -425,9 +680,9 @@ class GeminiContentGenerator:
                 "parts": [{"text": prompt}]
             }],
             "generationConfig": {
-                "temperature": 0.8,
-                "topK": 40,
-                "topP": 0.9,
+                "temperature": 0.85,
+                "topK": 50,
+                "topP": 0.95,
                 "maxOutputTokens": 1000
             }
         }
@@ -455,13 +710,15 @@ class GeminiContentGenerator:
         """Enhance content with business elements and freelancer positioning (additive only)."""
         enhanced = content.strip()
 
-        # 🔹 ADD: opening hook at the very top (only if not already starting with an emoji/bold/hook)
+        # 🔹 ADD: opening hook at the very top (human variation)
         hook = self._opening_hook()
-        if hook and not re.match(r"^[\W_]{0,3}[A-Za-z0-9#]", enhanced):
-            # content already starts with punctuation/emoji; leave as-is
-            pass
-        else:
-            enhanced = f"{hook}\n\n{enhanced}" if hook else enhanced
+        enhanced = self.humanizer.vary_opening(enhanced, hook)
+        if hook:
+            try:
+                # remember hook to rotate
+                self.history_manager.remember_choice("recent_hooks", hook)
+            except Exception:
+                pass
 
         # Add metrics if missing (existing behavior kept)
         if not re.search(r'\d+%', enhanced):
@@ -483,6 +740,10 @@ class GeminiContentGenerator:
             cta_pool = CONVERSION_CTAS
         cta = random.choice(cta_pool)
         enhanced += f"\n\n{cta}"
+        try:
+            self.history_manager.remember_choice("recent_ctas", cta)
+        except Exception:
+            pass
         
         # Add hashtags (use freelancer-flavored set if enabled; original kept)
         if freelancer_mode:
@@ -540,6 +801,9 @@ Most startups wait until it's too late. The best time to optimize was yesterday.
 
         return content
 
+# -----------------------------
+# Existing LinkedIn helper
+# -----------------------------
 
 class LinkedInHelper:
     """LinkedIn API helper."""
@@ -633,6 +897,9 @@ class LinkedInHelper:
         logger.info("Successfully posted as person")
         return response.json() if response.text else {}
 
+# -----------------------------
+# Existing main
+# -----------------------------
 
 def main() -> None:
     """Main function."""
